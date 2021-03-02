@@ -16,6 +16,7 @@ import com.kinchaku.stera.paymentapi.PaymentApiConnection
 import java.io.File
 import java.io.FileOutputStream
 import java.util.*
+import android.os.Environment
 
 object DisplaySingleton {
 
@@ -60,13 +61,11 @@ object DisplaySingleton {
     }
 
     fun write(fileName: String, bitmap: Bitmap) {
-        var outputStream: FileOutputStream? = null
-        val imageFile = File(context!!.externalCacheDir, fileName)
-        val savedImagePath = imageFile.absolutePath
+        val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+        var outputStream = FileOutputStream(imageFile)
         try {
-            outputStream = context!!.openFileOutput(savedImagePath, MODE_PRIVATE)
             bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-            Log.d(TAG, "Saved image: " + outputStream.fd.toString())
+            Log.d(TAG, "Saved image")
         } catch (error: Exception) {
             error.printStackTrace()
         } finally {
@@ -88,10 +87,11 @@ object DisplaySingleton {
                     mUsingCustomerDisplay = true
                     if (mHasPermission) {
                         downloadImage("https://dev.kinchaku.me/passkit/hSGQc8srYPSc8scd65ra7U/qrcode?size=480") { fileName ->
-                            val imageFile = File(context!!.externalCacheDir, fileName)
+//                            context!!.externalCacheDir
+                            val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
                             val savedImagePath = imageFile.absolutePath
                             if (!imageFile.exists()) {
-                                Log.d(TAG, "File does not exist!$savedImagePath")
+                                Log.d(TAG, "File does not exist: $savedImagePath")
                                 return@downloadImage
                             }
                             Log.d(TAG, "Downloaded image $savedImagePath")
@@ -99,7 +99,7 @@ object DisplaySingleton {
                             // Get PaymentDeviceManager instance
                             val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
                             // Show QR code image on CustomerDisplay
-                            mCustomerDisplay!!.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath)
+                            mCustomerDisplay?.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath)
                         }
                     } else {
                         Log.i(TAG, "Don't have storage permission, skipping image download")
