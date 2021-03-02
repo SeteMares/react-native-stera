@@ -42,7 +42,7 @@ object DisplaySingleton {
 
     private fun downloadImage(url: String, onLoaded: (m: String) -> Unit) {
         val fileName = "IMG_" + System.currentTimeMillis().toString() + ".jpg"
-        Log.d(TAG, "Downloading image:$fileName")
+        Log.d(TAG, "Downloading image. Filename: $fileName")
 
         Glide.with(context!!)
             .asBitmap()
@@ -59,12 +59,14 @@ object DisplaySingleton {
             })
     }
 
-    fun write(fileName: String?, bitmap: Bitmap) {
+    fun write(fileName: String, bitmap: Bitmap) {
         var outputStream: FileOutputStream? = null
+        val imageFile = File(context!!.externalCacheDir, fileName)
+        val savedImagePath = imageFile.absolutePath
         try {
-            outputStream = context!!.openFileOutput(fileName, MODE_PRIVATE)
+            outputStream = context!!.openFileOutput(savedImagePath, MODE_PRIVATE)
             bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-            Log.d(TAG, "Saved image")
+            Log.d(TAG, "Saved image: " + outputStream.fd.toString())
         } catch (error: Exception) {
             error.printStackTrace()
         } finally {
@@ -84,19 +86,23 @@ object DisplaySingleton {
                 Log.d(TAG, "[in] onApiConnected")
                 mCallbackHandler.post(Runnable {
                     mUsingCustomerDisplay = true
-                    downloadImage("https://dev.kinchaku.me/passkit/hSGQc8srYPSc8scd65ra7U/qrcode?size=480") { fileName ->
-                        val imageFile = File(context!!.filesDir, fileName)
-                        val savedImagePath = imageFile.absolutePath
-                        if (!imageFile.exists()) {
-                            Log.d(TAG, "File does not exist!$savedImagePath")
-                            return@downloadImage
-                        }
-                        Log.d(TAG, "Downloaded image $savedImagePath")
+                    if (mHasPermission) {
+                        downloadImage("https://dev.kinchaku.me/passkit/hSGQc8srYPSc8scd65ra7U/qrcode?size=480") { fileName ->
+                            val imageFile = File(context!!.externalCacheDir, fileName)
+                            val savedImagePath = imageFile.absolutePath
+                            if (!imageFile.exists()) {
+                                Log.d(TAG, "File does not exist!$savedImagePath")
+                                return@downloadImage
+                            }
+                            Log.d(TAG, "Downloaded image $savedImagePath")
 
-                        // Get PaymentDeviceManager instance
-                        val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
-                        // Show QR code image on CustomerDisplay
-                        mCustomerDisplay!!.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath)
+                            // Get PaymentDeviceManager instance
+                            val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
+                            // Show QR code image on CustomerDisplay
+                            mCustomerDisplay!!.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath)
+                        }
+                    } else {
+                        Log.i(TAG, "Don't have storage permission, skipping image download")
                     }
                 }.also { mRunnable = it })
                 Log.d(TAG, "[out] onApiConnected")

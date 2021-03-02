@@ -76,6 +76,7 @@ class SteraModule(
         permissions: Array<String?>,
         grantResults: IntArray
     ): Boolean {
+        Log.d(TAG, "onRequestPermissionResult: $requestCode")
         if (requestCode == REQUEST_EXTERNAL_STORAGE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.d(TAG, "We get the external storage permission")
@@ -93,12 +94,10 @@ class SteraModule(
         return true
     }
 
-//    @ReactMethod
-//    fun initialize(stringArgument: String, numberArgument: Int, callback: Callback) {
-//        // TODO: Implement some actually useful functionality
-//        callback.invoke("Received numberArgument: $numberArgument stringArgument: $stringArgument")
-//        val context: Context = reactApplicationContext
-//    }
+    @ReactMethod
+    fun sampleMethod(stringArgument: String, numberArgument: Int, callback: Callback) {
+        callback.invoke("Received numberArgument: $numberArgument stringArgument: $stringArgument")
+    }
 
     @ReactMethod
     fun getDeviceName(cb: Callback) {

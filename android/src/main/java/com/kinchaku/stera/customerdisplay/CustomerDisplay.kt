@@ -91,7 +91,7 @@ class CustomerDisplay(val displayType: String, private val packageName: String, 
         Log.d(TAG, "[in] setupImage()")
         try {
             Log.d(TAG, "setup QR Code Image" + this.imageSource)
-            mICustomerDisplay!!.setCustomerImage(
+            mICustomerDisplay?.setCustomerImage(
                 packageName,
                 mCustomerDisplayImage.imageKind,
                 mCustomerDisplayImage.imageNumber,
@@ -112,7 +112,7 @@ class CustomerDisplay(val displayType: String, private val packageName: String, 
 
         try {
             Log.d(TAG, "showDisplay QR Code Screen")
-            mICustomerDisplay!!.doDisplayScreen(packageName, mCustomerDisplayImage.xml)
+            mICustomerDisplay?.doDisplayScreen(packageName, mCustomerDisplayImage.xml)
         } catch (e: ArgumentException) {
             e.printStackTrace()
         } catch (e: FatalException) {
@@ -124,9 +124,12 @@ class CustomerDisplay(val displayType: String, private val packageName: String, 
     // Finish using CustomerDisplay
     fun terminateCustomerDisplay(displayOff: Boolean) {
         Log.d(TAG, "[in] terminateCustomerDisplay()")
+        if (mICustomerDisplay == null) {
+            return;
+        }
         try {
-            mICustomerDisplay!!.closeCustomerDisplay(packageName, displayOff)
-            mICustomerDisplay!!.unregisterCustomerDisplayListeners(packageName)
+            mICustomerDisplay?.closeCustomerDisplay(packageName, displayOff)
+            mICustomerDisplay?.unregisterCustomerDisplayListeners(packageName)
         } catch (e: ArgumentException) {
             e.printStackTrace()
         } catch (e: FatalException) {
