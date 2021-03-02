@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.modules.core.PermissionAwareActivity
@@ -31,6 +32,14 @@ class SteraModule(
         super.initialize()
         eventEmitter = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
         reactContext.addLifecycleEventListener(this)
+        val permission = ContextCompat.checkSelfPermission(reactContext, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            DisplaySingleton.mHasPermission = false
+            // We don't have permission so prompt the user
+            requestPermission()
+        } else {
+            DisplaySingleton.mHasPermission = true
+        }
     }
 
     override fun onHostResume() {

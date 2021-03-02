@@ -1,21 +1,11 @@
 package com.kinchaku.stera
 
-import android.Manifest
-import android.app.Activity
 import android.content.ContentResolver
 import android.content.Context.MODE_PRIVATE
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.widget.ImageView
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.SimpleTarget
@@ -29,22 +19,12 @@ import java.util.*
 
 object DisplaySingleton {
 
-    private var contentResolver : ContentResolver? = null
+    private var contentResolver: ContentResolver? = null
     private var context: ReactApplicationContext? = null
 
     fun initialize(context: ReactApplicationContext) {
         contentResolver = context.contentResolver
         this.context = context
-        // Check if we have the permission to access the terminal storage
-        // Check if we have the permission to access the terminal storage
-        val permission = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            mHasPermission = false
-            // We don't have permission so prompt the user
-            requestPermission()
-        } else {
-            mHasPermission = true
-        }
     }
 
     private var mPaymentApiConnection: PaymentApiConnection? = null
