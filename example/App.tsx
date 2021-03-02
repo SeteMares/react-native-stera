@@ -8,30 +8,33 @@
  * https://github.com/facebook/react-native
  */
 
-import React, { Component } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import React, {Component} from 'react';
+import {Platform, StyleSheet, Text, View} from 'react-native';
 import Stera from 'react-native-stera';
 
 export default class App extends Component<{}> {
   state = {
     status: 'starting',
-    message: '--'
+    model: 'N/A',
   };
   componentDidMount() {
-    Stera.sampleMethod('Testing', 123, (message) => {
-      this.setState({
-        status: 'native callback received',
-        message
-      });
+    Stera.getDeviceName((e, model) => {
+      if (e !== null) {
+        this.setState({status: e});
+        return;
+      }
+      this.setState({status: 'Started', model});
     });
   }
   render() {
     return (
       <View style={styles.container}>
-        <Text style={styles.welcome}>☆Stera example☆</Text>
+        <Text style={styles.welcome}>☆Stera☆</Text>
         <Text style={styles.instructions}>STATUS: {this.state.status}</Text>
-        <Text style={styles.welcome}>☆NATIVE CALLBACK MESSAGE☆</Text>
-        <Text style={styles.instructions}>{this.state.message}</Text>
+        {/* <Text style={styles.welcome}>☆NATIVE CALLBACK MESSAGE☆</Text>
+        <Text style={styles.instructions}>{this.state.message}</Text> */}
+        <Text style={styles.welcome}>☆MODEL☆</Text>
+        <Text style={styles.instructions}>{this.state.model}</Text>
       </View>
     );
   }

@@ -10,7 +10,6 @@ import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
 
-
 class SteraModule(
     private val reactContext: ReactApplicationContext
 ) : ReactContextBaseJavaModule(reactContext),
@@ -23,13 +22,16 @@ class SteraModule(
         Manifest.permission.WRITE_EXTERNAL_STORAGE
     )
     private lateinit var eventEmitter: DeviceEventManagerModule.RCTDeviceEventEmitter
-
     private val TAG = "SteraModule"
 
     override fun getName() = "Stera"
 
     override fun initialize() {
         super.initialize()
+        if (Build.MODEL != "JT-C60") {
+            Log.i(TAG, "Skipping init. Not a Panasonic device: " + Build.MODEL)
+            return;
+        }
         eventEmitter = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
         reactContext.addLifecycleEventListener(this)
         val permission = ContextCompat.checkSelfPermission(reactContext, Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -52,16 +54,7 @@ class SteraModule(
     }
 
     override fun onHostDestroy() {
-//        try {
-//            DisplaySingleton.apply {
 
-//            }
-//        } finally {
-//            DisplaySingleton.contentResolver = null
-//            DisplaySingleton.jobs.forEach {
-//                it.cancel()
-//            }
-//        }
     }
 
     //Request the external storage permission
@@ -92,11 +85,6 @@ class SteraModule(
         }
 
         return true
-    }
-
-    @ReactMethod
-    fun sampleMethod(stringArgument: String, numberArgument: Int, callback: Callback) {
-        callback.invoke("Received numberArgument: $numberArgument stringArgument: $stringArgument")
     }
 
     @ReactMethod
