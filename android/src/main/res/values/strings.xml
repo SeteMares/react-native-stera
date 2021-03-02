@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Kinchaku</string>
+
+    <string name="errorShutDown">Double launch of small screen display is not possible.Please close the app</string>
+    <string name="ok">OK</string>
+    <string name="back">back</string>
+    <string name="go_to_top">top</string>
+    <string name="getCoupon">Get coupon!</string>
+</resources>
