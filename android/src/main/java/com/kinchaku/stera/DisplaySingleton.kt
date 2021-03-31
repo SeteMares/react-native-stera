@@ -1,8 +1,8 @@
 package com.kinchaku.stera
 
 import android.content.ContentResolver
-import android.content.Context.MODE_PRIVATE
 import android.graphics.Bitmap
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -16,7 +16,6 @@ import com.kinchaku.stera.paymentapi.PaymentApiConnection
 import java.io.File
 import java.io.FileOutputStream
 import java.util.*
-import android.os.Environment
 
 object DisplaySingleton {
 
@@ -36,6 +35,8 @@ object DisplaySingleton {
     private var mRunnable: Runnable? = null
     private var mUsingCustomerDisplay = false
     var mHasPermission = false
+    var imageURL: String? = null
+    private var savedImagePath: String? = null
 
 //    const val SUCCESS = 0
 //    const val FAIL = 1
@@ -48,7 +49,7 @@ object DisplaySingleton {
         Glide.with(context!!)
             .asBitmap()
             .load(url)
-            .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
             .into(object : SimpleTarget<Bitmap?>() {
                 override fun onResourceReady(
                     resource: Bitmap,
@@ -64,7 +65,7 @@ object DisplaySingleton {
         val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
         var outputStream = FileOutputStream(imageFile)
         try {
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 45, outputStream)
             Log.d(TAG, "Saved image")
         } catch (error: Exception) {
             error.printStackTrace()
@@ -82,24 +83,25 @@ object DisplaySingleton {
         mPaymentApiConnection!!.setIPaymentApiInitializationListener(object : IPaymentApiInitializationListener {
             // PaymentApi is connected
             override fun onApiConnected() {
-                Log.d(TAG, "[in] onApiConnected")
+                Log.d(TAG, "[in] onApiConnected. URL: $imageURL")
                 mCallbackHandler.post(Runnable {
-                    mUsingCustomerDisplay = true
-                    if (mHasPermission) {
-                        downloadImage("https://dev.kinchaku.me/passkit/hSGQc8srYPSc8scd65ra7U/qrcode?size=480") { fileName ->
-//                            context!!.externalCacheDir
+                    mUsingCustomerDisplay = !imageURL.isNullOrBlank()
+                    if (mHasPermission && mUsingCustomerDisplay) {
+                        downloadImage(imageURL!!) { fileName ->
                             val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
-                            val savedImagePath = imageFile.absolutePath
+                            savedImagePath = imageFile.absolutePath
                             if (!imageFile.exists()) {
                                 Log.d(TAG, "File does not exist: $savedImagePath")
+                                savedImagePath = null
                                 return@downloadImage
                             }
-                            Log.d(TAG, "Downloaded image $savedImagePath")
+                            val fileSize = imageFile.length()
+                            Log.d(TAG, "Downloaded image $savedImagePath, size: " +fileSize / 1024.0)
 
                             // Get PaymentDeviceManager instance
                             val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
                             // Show QR code image on CustomerDisplay
-                            mCustomerDisplay?.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath)
+                            mCustomerDisplay?.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath!!)
                         }
                     } else {
                         Log.i(TAG, "Don't have storage permission, skipping image download")
@@ -120,7 +122,6 @@ object DisplaySingleton {
         // Get SDK Version
         val sdkVersion = mPaymentApiConnection!!.sdkVersion
         Log.d(TAG, "SDK version=$sdkVersion")
-
     }
 
     // Terminate CustomerDisplayApi and PaymentApi
@@ -137,6 +138,21 @@ object DisplaySingleton {
             mCallbackHandler.removeCallbacks(mRunnable!!)
         }
         mUsingCustomerDisplay = false
+    }
+
+    fun showImage(url: String) {
+        imageURL = url
+        onResume()
+    }
+
+    fun hideImage() {
+        if (!savedImagePath.isNullOrEmpty()) {
+            val imageFile = File(savedImagePath!!)
+            imageFile.delete()
+        }
+        imageURL = null
+        savedImagePath = null
+        onPause()
     }
 
 }

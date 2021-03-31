@@ -72,12 +72,12 @@ class SteraModule(
         Log.d(TAG, "onRequestPermissionResult: $requestCode")
         if (requestCode == REQUEST_EXTERNAL_STORAGE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "We get the external storage permission")
+                Log.d(TAG, "We've got the external storage permission")
                 // We have permission
                 DisplaySingleton.mHasPermission = true
                 return true
             }
-            Log.d(TAG, "We wasn't able to get the external storage permission")
+            Log.d(TAG, "We weren't able to get the external storage permission")
             // We don't have permission so prompt the user again
             DisplaySingleton.mHasPermission = false
             requestPermission()
@@ -94,6 +94,16 @@ class SteraModule(
         } catch (e: Exception) {
             cb.invoke(e.toString(), null)
         }
+    }
+
+    @ReactMethod
+    fun displayImage(url: String) {
+        DisplaySingleton.showImage(url)
+    }
+
+    @ReactMethod
+    fun hideImage() {
+        DisplaySingleton.hideImage()
     }
 
 }

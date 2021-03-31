@@ -9,7 +9,7 @@
  */
 
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View} from 'react-native';
+import {Platform, StyleSheet, Text, View, Button} from 'react-native';
 import Stera from 'react-native-stera';
 
 export default class App extends Component<{}> {
@@ -25,7 +25,12 @@ export default class App extends Component<{}> {
       }
       this.setState({status: 'Started', model});
     });
+
+    Stera.displayImage(
+      'https://dev.kinchaku.me/passkit/r9Mz8hFbPBBGEe4mwfK5BU/qrcode?size=stera',
+    );
   }
+
   render() {
     return (
       <View style={styles.container}>
@@ -35,6 +40,27 @@ export default class App extends Component<{}> {
         <Text style={styles.instructions}>{this.state.message}</Text> */}
         <Text style={styles.welcome}>☆MODEL☆</Text>
         <Text style={styles.instructions}>{this.state.model}</Text>
+
+        <Button
+          style={{borderRadius: 20}}
+          contentStyle={{height: 36, paddingHorizontal: 32}}
+          onPress={() => Stera.hideImage()}
+          title="Hide image"
+        />
+
+        <Button
+          style={{borderRadius: 20}}
+          contentStyle={{
+            height: 36,
+            paddingHorizontal: 32,
+          }}
+          onPress={() =>
+            Stera.displayImage(
+              'https://dev.kinchaku.me/passkit/r9Mz8hFbPBBGEe4mwfK5BU/qrcode?size=stera',
+            )
+          }
+          title="Show image"
+        />
       </View>
     );
   }
