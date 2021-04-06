@@ -13,7 +13,7 @@ import java.util.Arrays
 class SteraPackage : ReactPackage {
 
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-        DisplaySingleton.initialize(reactContext)
+        DisplaySingleton.initialize(reactContext.applicationContext)
         return listOf(SteraModule(reactContext))
     }
 

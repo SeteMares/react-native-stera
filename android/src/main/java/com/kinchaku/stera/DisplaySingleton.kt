@@ -1,6 +1,8 @@
 package com.kinchaku.stera
 
+import android.annotation.SuppressLint
 import android.content.ContentResolver
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.Environment
 import android.os.Handler
@@ -9,7 +11,6 @@ import android.util.Log
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.SimpleTarget
-import com.facebook.react.bridge.ReactApplicationContext
 import com.kinchaku.stera.customerdisplay.CustomerDisplay
 import com.kinchaku.stera.paymentapi.IPaymentApiInitializationListener
 import com.kinchaku.stera.paymentapi.PaymentApiConnection
@@ -17,14 +18,15 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.*
 
+@SuppressLint("StaticFieldLeak")
 object DisplaySingleton {
 
     private var contentResolver: ContentResolver? = null
-    private var context: ReactApplicationContext? = null
+    private var context: Context? = null
 
-    fun initialize(context: ReactApplicationContext) {
+    fun initialize(context: Context) {
         contentResolver = context.contentResolver
-        this.context = context
+        this.context = context.applicationContext
     }
 
     private var mPaymentApiConnection: PaymentApiConnection? = null
