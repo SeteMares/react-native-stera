@@ -28,7 +28,7 @@ class SteraModule(
 
     override fun initialize() {
         super.initialize()
-        if (Build.MODEL != "JT-C60") {
+        if (!isSupported()) {
             Log.i(TAG, "Skipping init. Not a Panasonic device: " + Build.MODEL)
             return;
         }
@@ -98,12 +98,18 @@ class SteraModule(
 
     @ReactMethod
     fun displayImage(url: String) {
+        if (!DisplaySingleton.mHasPermission) return
         DisplaySingleton.showImage(url)
     }
 
     @ReactMethod
     fun hideImage() {
+        if (!DisplaySingleton.mHasPermission) return
         DisplaySingleton.hideImage()
     }
 
+    @ReactMethod
+    fun isSupported(): Boolean {
+        return Build.MODEL == "JT-C60"
+    }
 }
