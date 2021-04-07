@@ -36,7 +36,7 @@ class SteraModule(
         const val SUCCESS = 0
         const val FAIL = 1
         const val CANCEL = 2
-        const val TRANSACTION = 1
+        const val TRANSACTION = 1801
     }
 
     override fun getName() = "Stera"
@@ -44,7 +44,7 @@ class SteraModule(
     override fun initialize() {
         super.initialize()
 
-        if (!isSupported()) {
+        if (Build.MODEL != "JT-C60") {
             Log.i(TAG, "Skipping init. Not a Panasonic device: " + Build.MODEL)
             return
         }
@@ -163,8 +163,8 @@ class SteraModule(
     }
 
     @ReactMethod
-    fun isSupported(): Boolean {
-        return Build.MODEL == "JT-C60"
+    fun isSupported(promise: Promise?) {
+        promise!!.resolve(Build.MODEL == "JT-C60")
     }
 
     /* Get result of transaction
