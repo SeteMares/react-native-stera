@@ -1,19 +1,26 @@
 package com.kinchaku.stera
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
+import android.util.SparseArray
+import androidx.annotation.Nullable
 import androidx.core.content.ContextCompat
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
+import com.kinchaku.steradisplay.SaleIntent
+import java.util.*
 
 class SteraModule(
     private val reactContext: ReactApplicationContext
 ) : ReactContextBaseJavaModule(reactContext),
     LifecycleEventListener,
+    ActivityEventListener,
     PermissionListener {
 
     private val REQUEST_EXTERNAL_STORAGE = 1
@@ -22,16 +29,27 @@ class SteraModule(
         Manifest.permission.WRITE_EXTERNAL_STORAGE
     )
     private lateinit var eventEmitter: DeviceEventManagerModule.RCTDeviceEventEmitter
-    private val TAG = "SteraModule"
+    private var mPromises: SparseArray<Promise?>? = null
+
+    companion object {
+        const val TAG = "SteraModule"
+        const val SUCCESS = 0
+        const val FAIL = 1
+        const val CANCEL = 2
+        const val TRANSACTION = 1
+    }
 
     override fun getName() = "Stera"
 
     override fun initialize() {
         super.initialize()
+
         if (!isSupported()) {
             Log.i(TAG, "Skipping init. Not a Panasonic device: " + Build.MODEL)
-            return;
+            return
         }
+        reactContext.addActivityEventListener(this)
+
         eventEmitter = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
         reactContext.addLifecycleEventListener(this)
         val permission = ContextCompat.checkSelfPermission(reactContext, Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -42,6 +60,15 @@ class SteraModule(
         } else {
             DisplaySingleton.mHasPermission = true
         }
+        mPromises = SparseArray()
+    }
+
+    @Nullable
+    override fun getConstants(): Map<String, Any>? {
+        val constants = HashMap<String, Any>()
+        constants["OK"] = Activity.RESULT_OK
+        constants["CANCELED"] = Activity.RESULT_CANCELED
+        return constants
     }
 
     override fun onHostResume() {
@@ -88,6 +115,33 @@ class SteraModule(
     }
 
     @ReactMethod
+    fun getPayment(production: Boolean, subtotal: Int, eatingAway: Boolean, promise: Promise?) {
+        val salesIntent = SaleIntent()
+        val intRequestCode = TRANSACTION
+        val mTransactionMode: String = if (production) "1" else "2"
+        val mTransactionType = "1"
+
+        // Calculate tax
+        val doubleTax = if (eatingAway) subtotal * 0.08 else subtotal * 0.1
+
+        val intent: Intent = salesIntent.createSalesIntent(
+            mTransactionMode, // 1 prod, 2 sandbox
+            mTransactionType, // sales "1", cancel ”2”, returns ”3”
+            subtotal.toString(),
+            doubleTax.toInt().toString()
+        )
+        val activity = reactApplicationContext.currentActivity
+        activity!!.startActivityForResult(intent, intRequestCode)
+        mPromises!!.put(intRequestCode, promise)
+
+        Log.d(TAG, "TransactionMode=$mTransactionMode")
+        Log.d(TAG, "TransactionType=$mTransactionType")
+        Log.d(TAG, "Amount=$subtotal")
+        Log.d(TAG, "Tax=$doubleTax")
+        Log.d(TAG, "RequestCode=$intRequestCode")
+    }
+
+    @ReactMethod
     fun getDeviceName(cb: Callback) {
         try {
             cb.invoke(null, Build.MODEL)
@@ -111,5 +165,51 @@ class SteraModule(
     @ReactMethod
     fun isSupported(): Boolean {
         return Build.MODEL == "JT-C60"
+    }
+
+    /* Get result of transaction
+     * Send it to ResultActivity
+     * requestCode : 1=transaction, 2=reprint, 3=dailybalance
+     * resultCode : 0=success, 1=fail, 2=cancel
+     */
+    override fun onActivityResult(activity: Activity?, requestCode: Int, resultCode: Int, data: Intent?) {
+        Log.d(TAG, "[in] onActivityResult()")
+        Log.d(TAG, "requestCode=$requestCode")
+        Log.d(TAG, "resultCode=$resultCode")
+
+        val promise = mPromises!![requestCode]
+        if (promise != null) {
+            when (resultCode) {
+                SUCCESS -> {
+                    Log.d(TAG, "SUCCESS")
+                }
+                FAIL -> {
+                    Log.d(TAG, "ErrorCodeSales=" + data!!.getStringExtra("ErrorCode"))
+                    Log.d(TAG, "FAIL")
+                }
+                CANCEL -> {
+                    Log.d(TAG, "CANCEL")
+                }
+                else -> {
+                    Log.d(TAG, "Incorrect resultCode. resultCode=$resultCode")
+                }
+            }
+            val result: WritableMap = WritableNativeMap()
+            with(promise) {
+                result.putInt("resultCode", resultCode)
+                result.putMap("data", Arguments.makeNativeMap(data!!.extras))
+                resolve(result)
+            }
+            Log.d(TAG, "[out] onActivityResult()")
+            return
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+    }
+
+    override fun onCatalystInstanceDestroy() {
+        super.onCatalystInstanceDestroy()
+        reactContext.removeActivityEventListener(this)
     }
 }
