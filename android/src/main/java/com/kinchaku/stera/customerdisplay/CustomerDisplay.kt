@@ -5,10 +5,9 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.appcompat.app.AlertDialog
-import com.kinchaku.stera.R
 import com.panasonic.smartpayment.android.api.*
 
-class CustomerDisplay(val displayType: String, private val packageName: String, private val context: Context) {
+class CustomerDisplay(private val packageName: String, private val context: Context) {
 
     private var mICustomerDisplay: ICustomerDisplay? = null
     private val mCallbackHandler = Handler(Looper.getMainLooper())
@@ -17,7 +16,7 @@ class CustomerDisplay(val displayType: String, private val packageName: String, 
     private var imageSource: String? = null
 
     // Set listener of ICustomerDisplayListener (for buttons activity)
-    fun setICustomerDisplayListener(listener: ISteraCustomerDisplayListener?) {
+    fun setListener(listener: ISteraCustomerDisplayListener?) {
         mListener = listener
     }
 
@@ -26,23 +25,26 @@ class CustomerDisplay(val displayType: String, private val packageName: String, 
         override fun onOpenComplete(result: Boolean) {
             Log.d(TAG, "[in] onOpenComplete()")
             mCallbackHandler.post {
-                if (result) {
-                    Log.d(TAG, "result=$imageSource")
-
-                    // Set image for CustomerDisplay
-                    setupImage(imageSource!!)
-                    try {
-                        // Show image on CustomerDisplay
-                        showDisplay(displayType)
-                    } catch (e: ArgumentException) {
-                        e.printStackTrace()
-                    } catch (e: FatalException) {
-                        e.printStackTrace()
-                    }
-                } else {
+                if (!result) {
+                    mListener?.onOpenComplete(false)
                     Log.d(TAG, "CustomerDisplay was not opened")
                     Log.d(TAG, "result=false")
+                    return@post
                 }
+                // Set image for CustomerDisplay
+                setupImage(imageSource!!)
+                try {
+                    // Show image on CustomerDisplay
+                    mICustomerDisplay?.doDisplayScreen(packageName, mCustomerDisplayImage.xml)
+                    mListener?.onOpenComplete(result)
+                } catch (e: ArgumentException) {
+                    e.printStackTrace()
+                    mListener?.onOpenComplete(false)
+                } catch (e: FatalException) {
+                    e.printStackTrace()
+                    mListener?.onOpenComplete(false)
+                }
+
             }
             Log.d(TAG, "[out] onOpenComplete()")
         }
@@ -52,7 +54,7 @@ class CustomerDisplay(val displayType: String, private val packageName: String, 
             Log.d(TAG, "[in] onDetectButton()")
             mCallbackHandler.post { // Button press event notification on CustomerDisplay device.
                 Log.d(TAG, "button=$button")
-                mListener!!.onDetectButton(button)
+                mListener?.onDetectButton(button)
             }
             Log.d(TAG, "[out] onDetectButton()")
         }
@@ -71,15 +73,17 @@ class CustomerDisplay(val displayType: String, private val packageName: String, 
             mICustomerDisplay?.openCustomerDisplay(packageName)
         } catch (eArgument: ArgumentException) {
             eArgument.printStackTrace()
+            throw Exception("Initialization failed")
         } catch (eFatal: FatalException) {
             eFatal.printStackTrace()
             if (eFatal.additionalInformation == "113") {
                 val dialog = AlertDialog.Builder(context)
-                dialog.setMessage(context.getString(R.string.errorShutDown))
+                dialog.setMessage("Another launch of small screen display is not possible. Please close the app")
                     .setPositiveButton("OK", null)
                     .show()
             } else {
                 Log.d(TAG, "Caught an exception, code=" + eFatal.additionalInformation)
+                throw Exception("Initialization failed, code=" + eFatal.additionalInformation)
             }
         }
         Log.d(TAG, "[out] initializeCustomerDisplay()")
@@ -102,22 +106,6 @@ class CustomerDisplay(val displayType: String, private val packageName: String, 
             e.printStackTrace()
         }
         Log.d(TAG, "[out] setupImage()")
-    }
-
-    // Show image on CustomerDisplay
-    fun showDisplay(displayType: String) {
-        Log.d(TAG, "[in] showDisplay()")
-        Log.d(TAG, "displayType=$displayType")
-
-        try {
-            Log.d(TAG, "showDisplay QR Code Screen")
-            mICustomerDisplay?.doDisplayScreen(packageName, mCustomerDisplayImage.xml)
-        } catch (e: ArgumentException) {
-            e.printStackTrace()
-        } catch (e: FatalException) {
-            e.printStackTrace()
-        }
-        Log.d(TAG, "[out] showDisplay()")
     }
 
     // Finish using CustomerDisplay

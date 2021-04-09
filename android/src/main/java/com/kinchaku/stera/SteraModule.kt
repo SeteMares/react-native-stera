@@ -13,10 +13,9 @@ import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
-import java.util.*
 
 class SteraModule(
-    private val reactContext: ReactApplicationContext
+    private val reactContext: ReactApplicationContext,
 ) : ReactContextBaseJavaModule(reactContext),
     LifecycleEventListener,
     ActivityEventListener,
@@ -93,7 +92,7 @@ class SteraModule(
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String?>,
-        grantResults: IntArray
+        grantResults: IntArray,
     ): Boolean {
         Log.d(TAG, "onRequestPermissionResult: $requestCode")
         if (requestCode == REQUEST_EXTERNAL_STORAGE) {
@@ -150,20 +149,52 @@ class SteraModule(
     }
 
     @ReactMethod
-    fun displayImage(url: String) {
-        if (!SteraSingleton.mHasPermission) return
-        SteraSingleton.showImage(url)
+    fun displayImage(url: String, promise: Promise?) {
+        if (!SteraSingleton.mHasPermission) {
+            promise?.reject("no_permisson", "No storage permission")
+            return
+        }
+        SteraSingleton.showImage(url, promise)
     }
 
     @ReactMethod
-    fun hideImage() {
-        if (!SteraSingleton.mHasPermission) return
+    fun hideImage(promise: Promise?) {
+        if (!SteraSingleton.mHasPermission) {
+            promise?.reject("no_permisson", "No storage permission")
+            return
+        }
         SteraSingleton.hideImage()
+        promise?.resolve(true)
     }
 
     @ReactMethod
     fun isSupported(promise: Promise?) {
-        promise!!.resolve(Build.MODEL == "JT-C60")
+        promise?.resolve(Build.MODEL == "JT-C60")
+    }
+
+    @ReactMethod
+    fun printTicket(
+        line1: String,
+        line2: String,
+        line3: String,
+        line4: String,
+        str: String?,
+        promise: Promise?,
+    ) {
+        if (!SteraSingleton.mHasPermission) {
+            promise?.reject("no_permisson", "No storage permission")
+            return
+        }
+        SteraSingleton.printTicket(line1, line2, line3, line4, str, promise)
+    }
+
+    @ReactMethod
+    fun printXML(xml: String, str: String?, promise: Promise?) {
+        if (!SteraSingleton.mHasPermission) {
+            promise?.reject("no_permisson", "No storage permission")
+            return
+        }
+        SteraSingleton.printXML(xml, str, promise)
     }
 
     /* Get result of transaction

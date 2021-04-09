@@ -11,7 +11,9 @@ import android.util.Log
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.SimpleTarget
+import com.facebook.react.bridge.Promise
 import com.kinchaku.stera.customerdisplay.CustomerDisplay
+import com.kinchaku.stera.customerdisplay.ISteraCustomerDisplayListener
 import com.kinchaku.stera.paymentapi.IPaymentApiInitializationListener
 import com.kinchaku.stera.paymentapi.PaymentApiConnection
 import com.kinchaku.stera.printer.PrintTicket
@@ -81,10 +83,10 @@ object SteraSingleton {
         }
     }
 
-    fun onResume() {
+    fun onResume(promise: Promise? = null) {
         // Show QR code image on CustomerDisplay
         mPaymentApiConnection = PaymentApiConnection()
-        mCustomerDisplay = CustomerDisplay(CustomerDisplay.IMAGE, context!!.packageName, context!!)
+        mCustomerDisplay = CustomerDisplay(context!!.packageName, context!!)
 
         // check if PaymentApi is connected
         mPaymentApiConnection!!.setIPaymentApiInitializationListener(object : IPaymentApiInitializationListener {
@@ -93,26 +95,58 @@ object SteraSingleton {
                 Log.d(TAG, "[in] onApiConnected. URL: $imageURL")
                 mCallbackHandler.post(Runnable {
                     mUsingCustomerDisplay = !imageURL.isNullOrBlank()
-                    if (mHasPermission && mUsingCustomerDisplay) {
-                        downloadImage(imageURL!!) { fileName ->
-                            val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
-                            savedImagePath = imageFile.absolutePath
-                            if (!imageFile.exists()) {
-                                Log.d(TAG, "File does not exist: $savedImagePath")
-                                savedImagePath = null
-                                return@downloadImage
-                            }
-                            val fileSize = imageFile.length()
-                            Log.d(TAG, "Downloaded image $savedImagePath, size: " + fileSize / 1024.0)
-
-                            // Get PaymentDeviceManager instance
-                            val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
-                            // Show QR code image on CustomerDisplay
-                            mCustomerDisplay?.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath!!)
-                        }
-                    } else {
-                        Log.i(TAG, "Don't have storage permission, skipping image download")
+                    if (!mHasPermission) {
+                        Log.i(TAG, "Don't have storage permission")
+                        promise?.reject("no_permisson", "No storage permission")
+                        return@Runnable
                     }
+                    if (!mUsingCustomerDisplay) {
+                        Log.d(TAG, "No image set. Skipping")
+                        return@Runnable
+                    }
+
+                    downloadImage(imageURL!!) { fileName ->
+                        val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+                        savedImagePath = imageFile.absolutePath
+                        if (!imageFile.exists()) {
+                            Log.d(TAG, "File does not exist: $savedImagePath")
+                            savedImagePath = null
+                            promise?.reject("download_failed", "Image saving failed")
+                            return@downloadImage
+                        }
+                        val fileSize = imageFile.length()
+                        Log.d(TAG, "Downloaded image $savedImagePath, size: " + fileSize / 1024.0)
+
+                        // Get PaymentDeviceManager instance
+                        val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
+                        // Show QR code image on CustomerDisplay
+                        try {
+                            mCustomerDisplay?.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath!!)
+                        } catch (e: Exception) {
+                            promise?.reject("init_failed", e.message)
+                            return@downloadImage
+                        }
+                        if (promise !== null) {
+                            mCustomerDisplay?.setListener(object : ISteraCustomerDisplayListener {
+                                override fun onOpenComplete(result: Boolean) {
+                                    Log.d(TAG, "[in] onOpenComplete()")
+                                    mCallbackHandler.post {
+                                        if (result) {
+                                            promise?.resolve(true)
+                                        } else {
+                                            promise?.reject("open_display", "Display open failed")
+                                        }
+                                    }
+                                    Log.d(TAG, "[out] onOpenComplete()")
+                                }
+
+                                override fun onDetectButton(button: Int) {
+                                    //nothing to do here
+                                }
+                            })
+                        }
+                    }
+
                 }.also { mRunnable = it })
                 Log.d(TAG, "[out] onApiConnected")
             }
@@ -147,9 +181,9 @@ object SteraSingleton {
         mUsingCustomerDisplay = false
     }
 
-    fun showImage(url: String) {
+    fun showImage(url: String, promise: Promise?) {
         imageURL = url
-        onResume()
+        onResume(promise)
     }
 
     fun hideImage() {
@@ -167,60 +201,11 @@ object SteraSingleton {
         line2: String,
         line3: String,
         line4: String,
-        str: String?, asIs: Boolean = false,
+        str: String?,
+        promise: Promise?,
     ) {
         val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
-        var imageSource: String? = null
-        if (str != null && !asIs) {
-            val saver = SaveToBMP()
-            val encoder = Encoder(200)
-            val bm = encoder.encodeAsBitmap(str)
-            val fileName = "IMG_" + System.currentTimeMillis().toString() + ".bmp"
-            val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
 
-            imageSource = imageFile.absolutePath
-            saver.save(bm, imageSource)
-
-            if (!imageFile.exists()) {
-                Log.d(TAG, "File does not exist: $imageSource")
-                return
-            }
-        }
-        if (asIs) {
-            imageSource = str
-        }
-        val printTicket = PrintTicket(
-            line1,
-            line2,
-            line3,
-            line4,
-            imageSource, !asIs)
-        // Print ticket
-        if (iPaymentDeviceManager != null) {
-            printTicket.print(iPaymentDeviceManager)
-        }
-        // Check if printing is successful
-        printTicket.setPrinterListener(object : PrinterListener {
-            override fun onPrintReceipt(result: Result?) {
-                if (imageSource != null) {
-                    val imageFile = File(imageSource)
-                    if (imageFile.exists()) {
-                        imageFile.delete()
-                    }
-                }
-                Log.d(TAG, "[in] onPrintReceipt")
-                mCallbackHandler.post {
-                    if (result?.resultCode == SUCCESS) {
-                        Log.d(TAG, "Printing was successful")
-                    }
-                }
-                Log.d(TAG, "[out] onPrintReceipt")
-            }
-        })
-    }
-
-    fun printXML(xml: String, str: String?) {
-        val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
         var imageSource: String? = null
         if (str != null) {
             val saver = SaveToBMP()
@@ -234,18 +219,31 @@ object SteraSingleton {
 
             if (!imageFile.exists()) {
                 Log.d(TAG, "File does not exist: $imageSource")
+                promise?.reject("qr_fail", "QR code encoder failed to save image")
                 return
             }
         }
-        val printXML = PrintXML(xml, imageSource)
-        // Print ticket
-        if (iPaymentDeviceManager != null) {
-            printXML.print(iPaymentDeviceManager)
+
+        val printTicket = PrintTicket(
+            line1,
+            line2,
+            line3,
+            line4,
+            imageSource)
+
+        if (iPaymentDeviceManager == null) {
+            Log.d(TAG, "No payment device manager")
+            promise?.reject("not_initialized", "Payment API is not initialized")
+            return
         }
+
+        // Print ticket
+        printTicket.print(iPaymentDeviceManager!!)
+
         // Check if printing is successful
-        printXML.setPrinterListener(object : PrinterListener {
+        printTicket.setPrinterListener(object : PrinterListener {
             override fun onPrintReceipt(result: Result?) {
-                if (imageSource != null) {
+                if (!imageSource.isNullOrEmpty()) {
                     val imageFile = File(imageSource)
                     if (imageFile.exists()) {
                         imageFile.delete()
@@ -255,10 +253,69 @@ object SteraSingleton {
                 mCallbackHandler.post {
                     if (result?.resultCode == SUCCESS) {
                         Log.d(TAG, "Printing was successful")
+                        promise?.resolve(true)
+                    } else {
+                        promise?.reject(result?.resultCode.toString(), result?.message)
                     }
                 }
                 Log.d(TAG, "[out] onPrintReceipt")
             }
         })
     }
+
+    fun printXML(xml: String, str: String?, promise: Promise?) {
+        val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
+
+        var imageSource: String? = null
+        if (str != null) {
+            val saver = SaveToBMP()
+            val encoder = Encoder(200)
+            val bm = encoder.encodeAsBitmap(str)
+            val fileName = "IMG_" + System.currentTimeMillis().toString() + ".bmp"
+            val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+
+            imageSource = imageFile.absolutePath
+            saver.save(bm, imageSource)
+
+            if (!imageFile.exists()) {
+                Log.d(TAG, "File does not exist: $imageSource")
+                promise?.reject("qr_fail", "QR code encoder failed to save image")
+                return
+            }
+        }
+
+        val printXML = PrintXML(xml, imageSource)
+
+        if (iPaymentDeviceManager == null) {
+            Log.d(TAG, "No payment device manager")
+            promise?.reject("not_initialized", "Payment API is not initialized")
+            return
+        }
+
+        // Print xml
+        printXML.print(iPaymentDeviceManager!!)
+
+        // Check if printing is successful
+        printXML.setPrinterListener(object : PrinterListener {
+            override fun onPrintReceipt(result: Result?) {
+                if (!imageSource.isNullOrEmpty()) {
+                    val imageFile = File(imageSource)
+                    if (imageFile.exists()) {
+                        imageFile.delete()
+                    }
+                }
+                Log.d(TAG, "[in] onPrintReceipt")
+                mCallbackHandler.post {
+                    if (result?.resultCode == SUCCESS) {
+                        Log.d(TAG, "Printing was successful")
+                        promise?.resolve(true)
+                    } else {
+                        promise?.reject(result?.resultCode.toString(), result?.message)
+                    }
+                }
+                Log.d(TAG, "[out] onPrintReceipt")
+            }
+        })
+    }
+
 }
