@@ -13,7 +13,6 @@ import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
-import com.kinchaku.stera.SaleIntent
 import java.util.*
 
 class SteraModule(
@@ -54,11 +53,11 @@ class SteraModule(
         reactContext.addLifecycleEventListener(this)
         val permission = ContextCompat.checkSelfPermission(reactContext, Manifest.permission.WRITE_EXTERNAL_STORAGE)
         if (permission != PackageManager.PERMISSION_GRANTED) {
-            DisplaySingleton.mHasPermission = false
+            SteraSingleton.mHasPermission = false
             // We don't have permission so prompt the user
             requestPermission()
         } else {
-            DisplaySingleton.mHasPermission = true
+            SteraSingleton.mHasPermission = true
         }
         mPromises = SparseArray()
     }
@@ -72,12 +71,12 @@ class SteraModule(
     }
 
     override fun onHostResume() {
-        DisplaySingleton.onResume()
+        SteraSingleton.onResume()
     }
 
     override fun onHostPause() {
         // disconnect customer display here
-        DisplaySingleton.onPause()
+        SteraSingleton.onPause()
     }
 
     override fun onHostDestroy() {
@@ -101,12 +100,12 @@ class SteraModule(
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.d(TAG, "We've got the external storage permission")
                 // We have permission
-                DisplaySingleton.mHasPermission = true
+                SteraSingleton.mHasPermission = true
                 return true
             }
             Log.d(TAG, "We weren't able to get the external storage permission")
             // We don't have permission so prompt the user again
-            DisplaySingleton.mHasPermission = false
+            SteraSingleton.mHasPermission = false
             requestPermission()
             return true
         }
@@ -152,14 +151,14 @@ class SteraModule(
 
     @ReactMethod
     fun displayImage(url: String) {
-        if (!DisplaySingleton.mHasPermission) return
-        DisplaySingleton.showImage(url)
+        if (!SteraSingleton.mHasPermission) return
+        SteraSingleton.showImage(url)
     }
 
     @ReactMethod
     fun hideImage() {
-        if (!DisplaySingleton.mHasPermission) return
-        DisplaySingleton.hideImage()
+        if (!SteraSingleton.mHasPermission) return
+        SteraSingleton.hideImage()
     }
 
     @ReactMethod

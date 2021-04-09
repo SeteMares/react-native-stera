@@ -25,7 +25,7 @@ import java.io.FileOutputStream
 
 
 @SuppressLint("StaticFieldLeak")
-object DisplaySingleton {
+object SteraSingleton {
 
     private var contentResolver: ContentResolver? = null
     private var context: Context? = null
@@ -37,7 +37,7 @@ object DisplaySingleton {
 
     private var mPaymentApiConnection: PaymentApiConnection? = null
     private var mCustomerDisplay: CustomerDisplay? = null
-    private const val TAG = "DisplaySingleton"
+    private const val TAG = "SteraSingleton"
 
     private val mCallbackHandler: Handler = Handler(Looper.getMainLooper())
     private var mRunnable: Runnable? = null
