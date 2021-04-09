@@ -13,7 +13,7 @@ import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
-import com.kinchaku.steradisplay.SaleIntent
+import com.kinchaku.stera.SaleIntent
 import java.util.*
 
 class SteraModule(

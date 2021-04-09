@@ -14,7 +14,6 @@ class CustomerDisplay(val displayType: String, private val packageName: String, 
     private val mCallbackHandler = Handler(Looper.getMainLooper())
     private var mListener: ISteraCustomerDisplayListener? = null
     private val mCustomerDisplayImage = CustomerDisplayImage()
-    private val mCustomerDisplayCheckOut = CustomerDisplayCheckOut()
     private var imageSource: String? = null
 
     // Set listener of ICustomerDisplayListener (for buttons activity)

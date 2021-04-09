@@ -1,4 +1,4 @@
-package com.kinchaku.steradisplay
+package com.kinchaku.stera
 
 import android.content.Intent
 import android.util.Log

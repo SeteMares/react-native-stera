@@ -14,9 +14,15 @@ import com.bumptech.glide.request.target.SimpleTarget
 import com.kinchaku.stera.customerdisplay.CustomerDisplay
 import com.kinchaku.stera.paymentapi.IPaymentApiInitializationListener
 import com.kinchaku.stera.paymentapi.PaymentApiConnection
+import com.kinchaku.stera.printer.PrintTicket
+import com.kinchaku.stera.printer.PrintXML
+import com.kinchaku.stera.printer.PrinterListener
+import com.kinchaku.stera.printer.SaveToBMP
+import com.kinchaku.stera.qrcode.Encoder
+import com.panasonic.smartpayment.android.api.Result
 import java.io.File
 import java.io.FileOutputStream
-import java.util.*
+
 
 @SuppressLint("StaticFieldLeak")
 object DisplaySingleton {
@@ -40,9 +46,8 @@ object DisplaySingleton {
     var imageURL: String? = null
     private var savedImagePath: String? = null
 
-//    const val SUCCESS = 0
-//    const val FAIL = 1
-//    const val CANCEL = 2
+    // list of result code of printing error
+    const val SUCCESS = 0x00
 
     private fun downloadImage(url: String, onLoaded: (m: String) -> Unit) {
         val fileName = "IMG_" + System.currentTimeMillis().toString() + ".jpg"
@@ -55,7 +60,7 @@ object DisplaySingleton {
             .into(object : SimpleTarget<Bitmap?>() {
                 override fun onResourceReady(
                     resource: Bitmap,
-                    transition: com.bumptech.glide.request.transition.Transition<in Bitmap?>?
+                    transition: com.bumptech.glide.request.transition.Transition<in Bitmap?>?,
                 ) {
                     write(fileName, resource)
                     onLoaded(fileName)
@@ -72,7 +77,7 @@ object DisplaySingleton {
         } catch (error: Exception) {
             error.printStackTrace()
         } finally {
-            outputStream?.close()
+            outputStream.close()
         }
     }
 
@@ -98,7 +103,7 @@ object DisplaySingleton {
                                 return@downloadImage
                             }
                             val fileSize = imageFile.length()
-                            Log.d(TAG, "Downloaded image $savedImagePath, size: " +fileSize / 1024.0)
+                            Log.d(TAG, "Downloaded image $savedImagePath, size: " + fileSize / 1024.0)
 
                             // Get PaymentDeviceManager instance
                             val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
@@ -157,4 +162,103 @@ object DisplaySingleton {
         onPause()
     }
 
+    fun printTicket(
+        line1: String,
+        line2: String,
+        line3: String,
+        line4: String,
+        str: String?, asIs: Boolean = false,
+    ) {
+        val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
+        var imageSource: String? = null
+        if (str != null && !asIs) {
+            val saver = SaveToBMP()
+            val encoder = Encoder(200)
+            val bm = encoder.encodeAsBitmap(str)
+            val fileName = "IMG_" + System.currentTimeMillis().toString() + ".bmp"
+            val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+
+            imageSource = imageFile.absolutePath
+            saver.save(bm, imageSource)
+
+            if (!imageFile.exists()) {
+                Log.d(TAG, "File does not exist: $imageSource")
+                return
+            }
+        }
+        if (asIs) {
+            imageSource = str
+        }
+        val printTicket = PrintTicket(
+            line1,
+            line2,
+            line3,
+            line4,
+            imageSource, !asIs)
+        // Print ticket
+        if (iPaymentDeviceManager != null) {
+            printTicket.print(iPaymentDeviceManager)
+        }
+        // Check if printing is successful
+        printTicket.setPrinterListener(object : PrinterListener {
+            override fun onPrintReceipt(result: Result?) {
+                if (imageSource != null) {
+                    val imageFile = File(imageSource)
+                    if (imageFile.exists()) {
+                        imageFile.delete()
+                    }
+                }
+                Log.d(TAG, "[in] onPrintReceipt")
+                mCallbackHandler.post {
+                    if (result?.resultCode == SUCCESS) {
+                        Log.d(TAG, "Printing was successful")
+                    }
+                }
+                Log.d(TAG, "[out] onPrintReceipt")
+            }
+        })
+    }
+
+    fun printXML(xml: String, str: String?) {
+        val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
+        var imageSource: String? = null
+        if (str != null) {
+            val saver = SaveToBMP()
+            val encoder = Encoder(200)
+            val bm = encoder.encodeAsBitmap(str)
+            val fileName = "IMG_" + System.currentTimeMillis().toString() + ".bmp"
+            val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+
+            imageSource = imageFile.absolutePath
+            saver.save(bm, imageSource)
+
+            if (!imageFile.exists()) {
+                Log.d(TAG, "File does not exist: $imageSource")
+                return
+            }
+        }
+        val printXML = PrintXML(xml, imageSource)
+        // Print ticket
+        if (iPaymentDeviceManager != null) {
+            printXML.print(iPaymentDeviceManager)
+        }
+        // Check if printing is successful
+        printXML.setPrinterListener(object : PrinterListener {
+            override fun onPrintReceipt(result: Result?) {
+                if (imageSource != null) {
+                    val imageFile = File(imageSource)
+                    if (imageFile.exists()) {
+                        imageFile.delete()
+                    }
+                }
+                Log.d(TAG, "[in] onPrintReceipt")
+                mCallbackHandler.post {
+                    if (result?.resultCode == SUCCESS) {
+                        Log.d(TAG, "Printing was successful")
+                    }
+                }
+                Log.d(TAG, "[out] onPrintReceipt")
+            }
+        })
+    }
 }
