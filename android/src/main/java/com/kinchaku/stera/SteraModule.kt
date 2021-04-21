@@ -174,10 +174,7 @@ class SteraModule(
 
     @ReactMethod
     fun printTicket(
-        line1: String,
-        line2: String,
-        line3: String,
-        line4: String,
+        ticket: ReadableMap,
         str: String?,
         promise: Promise?,
     ) {
@@ -185,7 +182,7 @@ class SteraModule(
             promise?.reject("no_permisson", "No storage permission")
             return
         }
-        SteraSingleton.printTicket(line1, line2, line3, line4, str, promise)
+        SteraSingleton.printTicket(ticket, str, promise)
     }
 
     @ReactMethod

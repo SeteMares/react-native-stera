@@ -7,12 +7,10 @@ import android.util.Log
 import com.kinchaku.stera.printer.SaveToBMP
 import com.kinchaku.stera.qrcode.Encoder
 import com.panasonic.smartpayment.android.api.*
+import java.util.HashMap
 
 class PrintTicket(
-    private val line1: String,
-    private val line2: String,
-    private val line3: String,
-    private val line4: String,
+    private val ticket: HashMap<String, Any>,
     private val imageSource: String?,
     private val asImage: Boolean = true,
 ) {
@@ -75,10 +73,30 @@ class PrintTicket(
             sb.append("<page>\n")
             sb.append("<printElements>\n")
             sb.append("<sheet>\n")
-            sb.append("<line><text scale=\"3\">$line1</text></line>\n")
-            sb.append("<line><text scale=\"1\">$line2</text></line>\n")
-            sb.append("<line><text scale=\"2\">$line3</text></line>\n")
-            sb.append("<ruledLines><dashedLine thickness=\"3\"><horizontal length=\"0\" horizontalPosition=\"0\" verticalPosition=\"0\"/></dashedLine></ruledLines>\n")
+
+            sb.append("<line><text scale=\"4\">${ticket["brand"].toString()}</text></line>\n")
+            if (ticket.containsKey("venue")) {
+                sb.append("<line><text scale=\"1\">${ticket["venue"].toString()}</text></line>\n")
+            }
+
+            sb.append("<lineFeed num=\"1\"/>\n")
+            sb.append("<ruledLines><dashedLine thickness=\"4\"><horizontal length=\"0\" horizontalPosition=\"0\" verticalPosition=\"0\"/></dashedLine></ruledLines>\n")
+
+            if (ticket.containsKey("event")) {
+                sb.append("<lineFeed num=\"1\"/>\n")
+                sb.append("<line><text scale=\"2\">${ticket["event"]}</text></line>\n")
+                sb.append("<lineFeed num=\"1\"/>\n")
+            }
+
+            if (ticket.containsKey("category")) {
+                sb.append("<line><text scale=\"2\">${ticket["category"]}</text></line>\n")
+            }
+            if (ticket.containsKey("price")) {
+                sb.append("<line><text scale=\"1\">${ticket["price"]}</text></line>\n")
+            }
+
+            sb.append("<lineFeed num=\"1\"/>\n")
+            sb.append("<ruledLines><dashedLine thickness=\"4\"><horizontal length=\"0\" horizontalPosition=\"0\" verticalPosition=\"0\"/></dashedLine></ruledLines>\n")
             sb.append("<lineFeed num=\"2\"/>\n")
             sb.append("</sheet>\n")
 
@@ -94,10 +112,19 @@ class PrintTicket(
                     }
                 }
             }
+
             sb.append("<sheet>\n")
-            sb.append("<lineFeed num=\"2\"/>\n")
-            sb.append("<line><text scale=\"4\">$line4</text></line>\n")
-            sb.append("<lineFeed num=\"2\"/>\n")
+            if (ticket.containsKey("id")) {
+                sb.append("<line><text scale=\"2\">            ${ticket["id"]}</text></line>\n")
+            }
+
+            sb.append("<lineFeed num=\"1\"/>\n")
+            sb.append("<ruledLines><dashedLine thickness=\"4\"><horizontal length=\"0\" horizontalPosition=\"0\" verticalPosition=\"0\"/></dashedLine></ruledLines>\n")
+
+            if (ticket.containsKey("details")) {
+                sb.append("<lineFeed num=\"1\"/>\n")
+                sb.append("<line><text scale=\"2\">${ticket["details"]}</text></line>\n")
+            }
             sb.append("</sheet>\n")
             sb.append("</printElements>\n")
             sb.append("<paperCut paperCuttingMethod=\"partialcut\"/>\n")

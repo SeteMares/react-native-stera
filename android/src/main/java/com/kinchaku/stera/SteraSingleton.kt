@@ -12,6 +12,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.SimpleTarget
 import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReadableMap
 import com.kinchaku.stera.customerdisplay.CustomerDisplay
 import com.kinchaku.stera.customerdisplay.ISteraCustomerDisplayListener
 import com.kinchaku.stera.paymentapi.IPaymentApiInitializationListener
@@ -197,10 +198,7 @@ object SteraSingleton {
     }
 
     fun printTicket(
-        line1: String,
-        line2: String,
-        line3: String,
-        line4: String,
+        ticket: ReadableMap,
         str: String?,
         promise: Promise?,
     ) {
@@ -224,12 +222,7 @@ object SteraSingleton {
             }
         }
 
-        val printTicket = PrintTicket(
-            line1,
-            line2,
-            line3,
-            line4,
-            imageSource)
+        val printTicket = PrintTicket(ticket.toHashMap(), imageSource)
 
         if (iPaymentDeviceManager == null) {
             Log.d(TAG, "No payment device manager")
