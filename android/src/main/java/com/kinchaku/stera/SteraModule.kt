@@ -113,20 +113,17 @@ class SteraModule(
     }
 
     @ReactMethod
-    fun getPayment(production: Boolean, subtotal: Int, eatingAway: Boolean, promise: Promise?) {
+    fun getPayment(production: Boolean, subtotal: Int, tax: Int, promise: Promise?) {
         val salesIntent = SaleIntent()
         val intRequestCode = TRANSACTION
         val mTransactionMode: String = if (production) "1" else "2"
         val mTransactionType = "1"
 
-        // Calculate tax
-        val doubleTax = if (eatingAway) subtotal * 0.08 else subtotal * 0.1
-
         val intent: Intent = salesIntent.createSalesIntent(
             mTransactionMode, // 1 prod, 2 sandbox
             mTransactionType, // sales "1", cancel ”2”, returns ”3”
             subtotal.toString(),
-            doubleTax.toInt().toString()
+            tax.toString()
         )
         val activity = reactApplicationContext.currentActivity
         activity!!.startActivityForResult(intent, intRequestCode)
@@ -135,7 +132,7 @@ class SteraModule(
         Log.d(TAG, "TransactionMode=$mTransactionMode")
         Log.d(TAG, "TransactionType=$mTransactionType")
         Log.d(TAG, "Amount=$subtotal")
-        Log.d(TAG, "Tax=$doubleTax")
+        Log.d(TAG, "Tax=$tax")
         Log.d(TAG, "RequestCode=$intRequestCode")
     }
 
