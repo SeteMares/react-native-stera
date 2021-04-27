@@ -7,6 +7,7 @@ import android.util.Log
 import com.kinchaku.stera.printer.SaveToBMP
 import com.kinchaku.stera.qrcode.Encoder
 import com.panasonic.smartpayment.android.api.*
+import java.lang.Exception
 import java.util.HashMap
 
 class PrintTicket(
@@ -58,6 +59,8 @@ class PrintTicket(
             Log.d(TAG, "errorResultCode=$resultCode")
             Log.d(TAG, "errorMessage=$errorMessage")
             Log.d(TAG, "additionalInformation=$additionalInformation")
+        } catch (eOsFatal: Exception) {
+            eOsFatal.message?.let { Log.e(TAG, it) }
         }
         Log.d(TAG, "[out] printTicket()")
     }
