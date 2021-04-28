@@ -77,24 +77,24 @@ class PrintTicket(
             sb.append("<printElements>\n")
             sb.append("<sheet>\n")
 
-            sb.append("<line><text scale=\"4\">${ticket["brand"].toString()}</text></line>\n")
-            if (ticket.containsKey("venue")) {
-                sb.append("<line><text scale=\"1\">${ticket["venue"].toString()}</text></line>\n")
+            sb.append("<line><text scale=\"4\">${ticket["brand"]}</text></line>\n")
+            if (ticket.containsKey("venue") && ticket["venue"].isNotEmpty()) {
+                sb.append("<line><text scale=\"1\">${ticket["venue"]}</text></line>\n")
             }
 
             sb.append("<lineFeed num=\"1\"/>\n")
             sb.append("<ruledLines><dashedLine thickness=\"4\"><horizontal length=\"0\" horizontalPosition=\"0\" verticalPosition=\"0\"/></dashedLine></ruledLines>\n")
 
-            if (ticket.containsKey("event")) {
+            if (ticket.containsKey("event") && ticket["event"].isNotEmpty()) {
                 sb.append("<lineFeed num=\"1\"/>\n")
                 sb.append("<line><text scale=\"2\">${ticket["event"]}</text></line>\n")
                 sb.append("<lineFeed num=\"1\"/>\n")
             }
 
-            if (ticket.containsKey("category")) {
+            if (ticket.containsKey("category") && ticket["category"].isNotEmpty()) {
                 sb.append("<line><text scale=\"2\">${ticket["category"]}</text></line>\n")
             }
-            if (ticket.containsKey("price")) {
+            if (ticket.containsKey("price") && ticket["price"].isNotEmpty()) {
                 sb.append("<line><text scale=\"1\">${ticket["price"]}</text></line>\n")
             }
 
@@ -117,14 +117,14 @@ class PrintTicket(
             }
 
             sb.append("<sheet>\n")
-            if (ticket.containsKey("id")) {
+            if (ticket.containsKey("id") && ticket["id"].isNotEmpty()) {
                 sb.append("<line><text scale=\"2\">            ${ticket["id"]}</text></line>\n")
             }
 
             sb.append("<lineFeed num=\"1\"/>\n")
             sb.append("<ruledLines><dashedLine thickness=\"4\"><horizontal length=\"0\" horizontalPosition=\"0\" verticalPosition=\"0\"/></dashedLine></ruledLines>\n")
 
-            if (ticket.containsKey("details")) {
+            if (ticket.containsKey("details") && ticket["details"].isNotEmpty()) {
                 sb.append("<lineFeed num=\"1\"/>\n")
                 sb.append("<line><text scale=\"2\">${ticket["details"]}</text></line>\n")
             }
