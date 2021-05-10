@@ -128,6 +128,14 @@ class PrintTicket(
                 sb.append("<lineFeed num=\"1\"/>\n")
                 sb.append("<line><text scale=\"1\">${ticket["details"]}</text></line>\n")
             }
+            if (ticket.containsKey("website") && ticket["website"].toString().isNotEmpty()) {
+                sb.append("<lineFeed num=\"1\"/>\n")
+                sb.append("<line><text scale=\"1\">${ticket["website"]}</text></line>\n")
+            }
+            if (ticket.containsKey("phone") && ticket["phone"].toString().isNotEmpty()) {
+                sb.append("<lineFeed num=\"1\"/>\n")
+                sb.append("<line><text scale=\"1\">tel: ${ticket["phone"]}</text></line>\n")
+            }
             sb.append("</sheet>\n")
             sb.append("</printElements>\n")
             sb.append("<paperCut paperCuttingMethod=\"partialcut\"/>\n")
