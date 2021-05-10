@@ -78,23 +78,23 @@ class PrintTicket(
             sb.append("<sheet>\n")
 
             sb.append("<line><text scale=\"4\">${ticket["brand"]}</text></line>\n")
-            if (ticket.containsKey("venue") && ticket["venue"].isNotEmpty()) {
+            if (ticket.containsKey("venue") && ticket["venue"].toString().isNotEmpty()) {
                 sb.append("<line><text scale=\"1\">${ticket["venue"]}</text></line>\n")
             }
 
             sb.append("<lineFeed num=\"1\"/>\n")
             sb.append("<ruledLines><dashedLine thickness=\"4\"><horizontal length=\"0\" horizontalPosition=\"0\" verticalPosition=\"0\"/></dashedLine></ruledLines>\n")
 
-            if (ticket.containsKey("event") && ticket["event"].isNotEmpty()) {
+            if (ticket.containsKey("event") && ticket["event"].toString().isNotEmpty()) {
                 sb.append("<lineFeed num=\"1\"/>\n")
                 sb.append("<line><text scale=\"2\">${ticket["event"]}</text></line>\n")
                 sb.append("<lineFeed num=\"1\"/>\n")
             }
 
-            if (ticket.containsKey("category") && ticket["category"].isNotEmpty()) {
+            if (ticket.containsKey("category") && ticket["category"].toString().isNotEmpty()) {
                 sb.append("<line><text scale=\"2\">${ticket["category"]}</text></line>\n")
             }
-            if (ticket.containsKey("price") && ticket["price"].isNotEmpty()) {
+            if (ticket.containsKey("price") && ticket["price"].toString().isNotEmpty()) {
                 sb.append("<line><text scale=\"1\">${ticket["price"]}</text></line>\n")
             }
 
@@ -117,14 +117,14 @@ class PrintTicket(
             }
 
             sb.append("<sheet>\n")
-            if (ticket.containsKey("id") && ticket["id"].isNotEmpty()) {
+            if (ticket.containsKey("id") && ticket["id"].toString().isNotEmpty()) {
                 sb.append("<line><text scale=\"2\">            ${ticket["id"]}</text></line>\n")
             }
 
             sb.append("<lineFeed num=\"1\"/>\n")
             sb.append("<ruledLines><dashedLine thickness=\"4\"><horizontal length=\"0\" horizontalPosition=\"0\" verticalPosition=\"0\"/></dashedLine></ruledLines>\n")
 
-            if (ticket.containsKey("details") && ticket["details"].isNotEmpty()) {
+            if (ticket.containsKey("details") && ticket["details"].toString().isNotEmpty()) {
                 sb.append("<lineFeed num=\"1\"/>\n")
                 sb.append("<line><text scale=\"2\">${ticket["details"]}</text></line>\n")
             }
