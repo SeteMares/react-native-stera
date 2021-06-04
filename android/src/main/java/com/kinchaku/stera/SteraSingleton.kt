@@ -26,6 +26,7 @@ import com.panasonic.smartpayment.android.api.Result
 import java.io.File
 import java.io.FileOutputStream
 
+data class Message(val header1: String, val header2: String, val header3: String, val message1: String)
 
 @SuppressLint("StaticFieldLeak")
 object SteraSingleton {
@@ -47,10 +48,53 @@ object SteraSingleton {
     private var mUsingCustomerDisplay = false
     var mHasPermission = false
     var imageURL: String? = null
+    var msgData: Message? = null
     private var savedImagePath: String? = null
 
     // list of result code of printing error
     const val SUCCESS = 0x00
+
+    private fun initializeDisplay(promise: Promise? = null, fileName: String) {
+        val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+        savedImagePath = imageFile.absolutePath
+        if (!imageFile.exists()) {
+            Log.d(TAG, "File does not exist: $savedImagePath")
+            savedImagePath = null
+            promise?.reject("download_failed", "Image saving failed")
+            return
+        }
+        val fileSize = imageFile.length()
+        Log.d(TAG, "Downloaded image $savedImagePath, size: " + fileSize / 1024.0)
+
+        // Get PaymentDeviceManager instance
+        val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
+        // Show QR code image on CustomerDisplay
+        try {
+            mCustomerDisplay?.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath!!)
+        } catch (e: Exception) {
+            promise?.reject("init_failed", e.message)
+            return
+        }
+        if (promise !== null) {
+            mCustomerDisplay?.setListener(object : ISteraCustomerDisplayListener {
+                override fun onOpenComplete(result: Boolean) {
+                    Log.d(TAG, "[in] onOpenComplete()")
+                    mCallbackHandler.post {
+                        if (result) {
+                            promise?.resolve(true)
+                        } else {
+                            promise?.reject("open_display", "Display open failed")
+                        }
+                    }
+                    Log.d(TAG, "[out] onOpenComplete()")
+                }
+
+                override fun onDetectButton(button: Int) {
+                    //nothing to do here
+                }
+            })
+        }
+    }
 
     private fun downloadImage(url: String, onLoaded: (m: String) -> Unit) {
         val fileName = "IMG_" + System.currentTimeMillis().toString() + ".jpg"
@@ -71,6 +115,17 @@ object SteraSingleton {
             })
     }
 
+    private fun generateImage(url: String, onLoaded: (m: String) -> Unit) {
+        val encoder = Encoder(540, 280)
+        val bm = encoder.encodeAsBitmap(url)
+        val fileName = "IMG_" + System.currentTimeMillis().toString() + ".jpg"
+
+        if (bm != null) {
+            write(fileName, bm)
+            onLoaded(fileName)
+        }
+    }
+
     fun write(fileName: String, bitmap: Bitmap) {
         val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
         var outputStream = FileOutputStream(imageFile)
@@ -87,7 +142,7 @@ object SteraSingleton {
     fun onResume(promise: Promise? = null) {
         // Show QR code image on CustomerDisplay
         mPaymentApiConnection = PaymentApiConnection()
-        mCustomerDisplay = CustomerDisplay(context!!.packageName, context!!)
+        mCustomerDisplay = CustomerDisplay(context!!, msgData)
 
         // check if PaymentApi is connected
         mPaymentApiConnection!!.setIPaymentApiInitializationListener(object : IPaymentApiInitializationListener {
@@ -106,47 +161,14 @@ object SteraSingleton {
                         return@Runnable
                     }
 
-                    downloadImage(imageURL!!) { fileName ->
-                        val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
-                        savedImagePath = imageFile.absolutePath
-                        if (!imageFile.exists()) {
-                            Log.d(TAG, "File does not exist: $savedImagePath")
-                            savedImagePath = null
-                            promise?.reject("download_failed", "Image saving failed")
-                            return@downloadImage
+                    if (msgData !== null) {
+                        generateImage(imageURL!!) { fileName ->
+                            initializeDisplay(promise, fileName)
                         }
-                        val fileSize = imageFile.length()
-                        Log.d(TAG, "Downloaded image $savedImagePath, size: " + fileSize / 1024.0)
-
-                        // Get PaymentDeviceManager instance
-                        val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
-                        // Show QR code image on CustomerDisplay
-                        try {
-                            mCustomerDisplay?.initializeCustomerDisplay(iPaymentDeviceManager!!, savedImagePath!!)
-                        } catch (e: Exception) {
-                            promise?.reject("init_failed", e.message)
-                            return@downloadImage
+                    } else
+                        downloadImage(imageURL!!) { fileName ->
+                            initializeDisplay(promise, fileName)
                         }
-                        if (promise !== null) {
-                            mCustomerDisplay?.setListener(object : ISteraCustomerDisplayListener {
-                                override fun onOpenComplete(result: Boolean) {
-                                    Log.d(TAG, "[in] onOpenComplete()")
-                                    mCallbackHandler.post {
-                                        if (result) {
-                                            promise?.resolve(true)
-                                        } else {
-                                            promise?.reject("open_display", "Display open failed")
-                                        }
-                                    }
-                                    Log.d(TAG, "[out] onOpenComplete()")
-                                }
-
-                                override fun onDetectButton(button: Int) {
-                                    //nothing to do here
-                                }
-                            })
-                        }
-                    }
 
                 }.also { mRunnable = it })
                 Log.d(TAG, "[out] onApiConnected")
@@ -195,6 +217,23 @@ object SteraSingleton {
         imageURL = null
         savedImagePath = null
         onPause()
+    }
+
+    fun showMessage(headers: ReadableMap, url: String, promise: Promise?) {
+        val msg = headers.toHashMap()
+        var header1 = ""
+        var header2 = ""
+        var header3 = ""
+        var message1 = ""
+
+        if (msg.containsKey("header1")) header1 = msg["header1"].toString()
+        if (msg.containsKey("header2")) header2 = msg["header2"].toString()
+        if (msg.containsKey("header3")) header3 = msg["header3"].toString()
+        if (msg.containsKey("message1")) message1 = msg["message1"].toString()
+
+        msgData = Message(header1, header2, header3, message1)
+        imageURL = url
+        onResume(promise)
     }
 
     fun printTicket(

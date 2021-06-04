@@ -25,14 +25,16 @@ import com.kinchaku.stera.qrcode.qrcode.QRCodeWriter
  *
  * @author dswitkin@google.com (Daniel Switkin)
  */
-class Encoder internal constructor(private val dimension: Int) {
+class Encoder internal constructor(private val dimension: Int, private val margin: Int = 0) {
     @Throws(WriterException::class)
     fun encodeAsBitmap(contentsToEncode: String?): Bitmap? {
         if (contentsToEncode == null) {
             return null
         }
+
         val result: BitMatrix = try {
-            QRCodeWriter().encode(contentsToEncode, BarcodeFormat.QR_CODE, dimension, dimension)
+            QRCodeWriter().encode(contentsToEncode, BarcodeFormat.QR_CODE, dimension, dimension,
+                mapOf(EncodeHintType.MARGIN to margin))
         } catch (iae: IllegalArgumentException) {
             // Unsupported format
             return null
@@ -44,7 +46,6 @@ class Encoder internal constructor(private val dimension: Int) {
             val offset = y * width
             for (x in 0 until width) {
                 pixels[offset + x] = if (result[x, y]) BLACK else WHITE
-//                Log.d("Encoder", String.format("#%06X", 0xFFFFFF and col))
             }
         }
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -68,7 +69,7 @@ class Encoder internal constructor(private val dimension: Int) {
         val bitmapWidth = bitmap.width
         val bitmapHeight = bitmap.height
         val bytesByLine = Math.ceil((bitmapWidth.toFloat() / 8f).toDouble()).toInt()
-        val imageBytes = ByteArray( bytesByLine * bitmapHeight)
+        val imageBytes = ByteArray(bytesByLine * bitmapHeight)
         var i = 0
         for (posY in 0 until bitmapHeight) {
             var j = 0

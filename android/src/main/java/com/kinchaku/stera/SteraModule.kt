@@ -155,6 +155,15 @@ class SteraModule(
     }
 
     @ReactMethod
+    fun showMessage(headers: ReadableMap, url: String, promise: Promise?) {
+        if (!SteraSingleton.mHasPermission) {
+            promise?.reject("no_permisson", "No storage permission")
+            return
+        }
+        SteraSingleton.showMessage(headers, url, promise)
+    }
+
+    @ReactMethod
     fun hideImage(promise: Promise?) {
         if (!SteraSingleton.mHasPermission) {
             promise?.reject("no_permisson", "No storage permission")

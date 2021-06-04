@@ -5,14 +5,17 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.appcompat.app.AlertDialog
+import com.kinchaku.stera.Message
+import com.kinchaku.stera.R
 import com.panasonic.smartpayment.android.api.*
 
-class CustomerDisplay(private val packageName: String, private val context: Context) {
+class CustomerDisplay(private val context: Context, private val msg: Message?) {
 
     private var mICustomerDisplay: ICustomerDisplay? = null
     private val mCallbackHandler = Handler(Looper.getMainLooper())
     private var mListener: ISteraCustomerDisplayListener? = null
     private val mCustomerDisplayImage = CustomerDisplayImage()
+    private val mCustomerDisplayMessage = CustomerDisplayMessage(msg)
     private var imageSource: String? = null
 
     // Set listener of ICustomerDisplayListener (for buttons activity)
@@ -32,10 +35,16 @@ class CustomerDisplay(private val packageName: String, private val context: Cont
                     return@post
                 }
                 // Set image for CustomerDisplay
-                setupImage(imageSource!!)
+                setupImage()
+
+                var xml = mCustomerDisplayImage.xml
+                if (msg !== null) {
+                    xml = mCustomerDisplayMessage.xml
+                }
+
                 try {
                     // Show image on CustomerDisplay
-                    mICustomerDisplay?.doDisplayScreen(packageName, mCustomerDisplayImage.xml)
+                    mICustomerDisplay?.doDisplayScreen(context.packageName, xml)
                     mListener?.onOpenComplete(result)
                 } catch (e: ArgumentException) {
                     e.printStackTrace()
@@ -64,13 +73,13 @@ class CustomerDisplay(private val packageName: String, private val context: Cont
     fun initializeCustomerDisplay(mIPaymentDeviceManager: IPaymentDeviceManager, imageSource: String) {
         Log.d(TAG, "[in] initializeCustomerDisplay()")
         try {
-            Log.d(TAG, "Application PackageName =$packageName")
+            Log.d(TAG, "Application PackageName =${context.packageName}")
             Log.d(TAG, imageSource)
             this.imageSource = imageSource
 
             mICustomerDisplay = mIPaymentDeviceManager.customerDisplay
-            mICustomerDisplay?.registerCustomerDisplayListeners(packageName, mICustomerDisplayListener)
-            mICustomerDisplay?.openCustomerDisplay(packageName)
+            mICustomerDisplay?.registerCustomerDisplayListeners(context.packageName, mICustomerDisplayListener)
+            mICustomerDisplay?.openCustomerDisplay(context.packageName)
         } catch (eArgument: ArgumentException) {
             eArgument.printStackTrace()
             throw Exception("Initialization failed")
@@ -78,7 +87,7 @@ class CustomerDisplay(private val packageName: String, private val context: Cont
             eFatal.printStackTrace()
             if (eFatal.additionalInformation == "113") {
                 val dialog = AlertDialog.Builder(context)
-                dialog.setMessage("Another launch of small screen display is not possible. Please close the app")
+                dialog.setMessage(context.getString(R.string.errorShutDown))
                     .setPositiveButton("OK", null)
                     .show()
             } else {
@@ -90,15 +99,15 @@ class CustomerDisplay(private val packageName: String, private val context: Cont
     }
 
     // Set image for CustomerDisplay
-    private fun setupImage(displayType: String) {
+    private fun setupImage() {
         Log.d(TAG, "[in] setupImage()")
         try {
-            Log.d(TAG, "setup QR Code Image" + this.imageSource)
+            Log.d(TAG, "setup QR Code Image: $imageSource")
             mICustomerDisplay?.setCustomerImage(
-                packageName,
+                context.packageName,
                 mCustomerDisplayImage.imageKind,
                 mCustomerDisplayImage.imageNumber,
-                this.imageSource
+                imageSource
             )
         } catch (e: ArgumentException) {
             e.printStackTrace()
@@ -110,13 +119,12 @@ class CustomerDisplay(private val packageName: String, private val context: Cont
 
     // Finish using CustomerDisplay
     fun terminateCustomerDisplay(displayOff: Boolean) {
-        Log.d(TAG, "[in] terminateCustomerDisplay()")
-        if (mICustomerDisplay == null) {
-            return;
-        }
+        Log.d(TAG, "[in] terminateCustomerDisplay(): ${context.packageName}")
+        if (mICustomerDisplay == null) return
+
         try {
-            mICustomerDisplay?.closeCustomerDisplay(packageName, displayOff)
-            mICustomerDisplay?.unregisterCustomerDisplayListeners(packageName)
+            mICustomerDisplay?.closeCustomerDisplay(context.packageName, displayOff)
+            mICustomerDisplay?.unregisterCustomerDisplayListeners(context.packageName)
         } catch (e: ArgumentException) {
             e.printStackTrace()
         } catch (e: FatalException) {
@@ -127,7 +135,5 @@ class CustomerDisplay(private val packageName: String, private val context: Cont
 
     companion object {
         private const val TAG = "CustomerDisplay"
-        const val IMAGE = "image"
-        const val CHECKOUT = "checkOut"
     }
 }

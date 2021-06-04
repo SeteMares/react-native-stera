@@ -107,7 +107,7 @@ class PrintTicket(
                 if (asImage) {
                     sb.append("<image horizontalPosition=\"12\" scale=\"1\" src=\"$imageSource\" />\n")
                 } else {
-                    val encoder = Encoder(200)
+                    val encoder = Encoder(200, 0)
                     val bm = encoder.encodeAsBitmap(imageSource)
                     if (bm != null) {
                         val image = SaveToBMP.bytesToHexadecimalString(encoder.bitmapToBytes(bm)!!)

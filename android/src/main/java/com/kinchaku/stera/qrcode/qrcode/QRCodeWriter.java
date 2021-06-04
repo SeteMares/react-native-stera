@@ -39,7 +39,7 @@ public final class QRCodeWriter implements Writer {
 
   @Override
   public BitMatrix encode(String contents, BarcodeFormat format, int width, int height)
-      throws WriterException {
+          throws WriterException {
 
     return encode(contents, format, width, height, null);
   }
@@ -61,7 +61,7 @@ public final class QRCodeWriter implements Writer {
 
     if (width < 0 || height < 0) {
       throw new IllegalArgumentException("Requested dimensions are too small: " + width + 'x' +
-          height);
+              height);
     }
 
     ErrorCorrectionLevel errorCorrectionLevel = ErrorCorrectionLevel.L;
@@ -88,18 +88,19 @@ public final class QRCodeWriter implements Writer {
     }
     int inputWidth = input.getWidth();
     int inputHeight = input.getHeight();
-    int qrWidth = inputWidth + (quietZone * 2);
-    int qrHeight = inputHeight + (quietZone * 2);
+    int qrWidth = inputWidth;
+    int qrHeight = inputHeight;
     int outputWidth = Math.max(width, qrWidth);
     int outputHeight = Math.max(height, qrHeight);
 
-    int multiple = Math.min(outputWidth / qrWidth, outputHeight / qrHeight);
+    int multiple = (outputWidth - quietZone) / qrWidth;
+
     // Padding includes both the quiet zone and the extra white pixels to accommodate the requested
     // dimensions. For example, if input is 25x25 the QR will be 33x33 including the quiet zone.
     // If the requested size is 200x160, the multiple will be 4, for a QR of 132x132. These will
     // handle all the padding from 100x100 (the actual QR) up to 200x160.
-    int leftPadding = (outputWidth - (inputWidth * multiple)) / 2;
-    int topPadding = (outputHeight - (inputHeight * multiple)) / 2;
+    int leftPadding = quietZone; // (outputWidth - (inputWidth * multiple)) / 2
+    int topPadding = 0; // (outputHeight - (inputHeight * multiple)) / 2;
 
     BitMatrix output = new BitMatrix(outputWidth, outputHeight);
 
