@@ -215,6 +215,7 @@ object SteraSingleton {
             imageFile.delete()
         }
         imageURL = null
+        msgData = null
         savedImagePath = null
         onPause()
     }

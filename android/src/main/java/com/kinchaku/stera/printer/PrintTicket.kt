@@ -118,7 +118,7 @@ class PrintTicket(
 
             sb.append("<sheet>\n")
             if (ticket.containsKey("id") && ticket["id"].toString().isNotEmpty()) {
-                sb.append("<line><text scale=\"2\">            ${ticket["id"]}</text></line>\n")
+                sb.append("<line><text scale=\"2\">           ${ticket["id"]}</text></line>\n")
             }
 
             sb.append("<lineFeed num=\"1\"/>\n")
