@@ -1,5 +1,5 @@
 {
-    "name": "react-native-stera",
+    "name": "@SeteMares/react-native-stera",
     "title": "React Native Stera",
     "version": "1.0.0",
     "description": "TODO",
@@ -14,8 +14,8 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/github_account/react-native-stera.git",
-        "baseUrl": "https://github.com/github_account/react-native-stera"
+        "url": "git+https://github.com/SeteMares/react-native-stera.git",
+        "baseUrl": "https://github.com/SeteMares/react-native-stera"
     },
     "keywords": [
         "react-native"
@@ -37,5 +37,8 @@
     },
     "prettier": {
         "printWidth": 100
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com/"
     }
 }
