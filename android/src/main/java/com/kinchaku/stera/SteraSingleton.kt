@@ -192,12 +192,12 @@ object SteraSingleton {
     fun onPause() {
         Log.d(TAG, "[in] onPause()")
         if (mUsingCustomerDisplay) {
-            Log.d(TAG, "Handler is running.")
+            Log.d(TAG, "Terminating customer display.")
             mCustomerDisplay?.terminateCustomerDisplay(true)
-            mPaymentApiConnection!!.terminatePaymentApi(context!!)
         } else {
-            Log.d(TAG, "Handler didn't run.")
+            Log.d(TAG, "Not using customer display.")
         }
+        mPaymentApiConnection?.terminatePaymentApi(context!!)
         if (mRunnable !== null) {
             mCallbackHandler.removeCallbacks(mRunnable!!)
         }
