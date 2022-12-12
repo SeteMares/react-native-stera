@@ -41,6 +41,7 @@ class SteraModule(
 
     override fun initialize() {
         super.initialize()
+        Log.d(TAG, "DEVICE=" + Build.MODEL)
         if (Build.MODEL != "JT-C60" && Build.MODEL != "JT-VT10") {
             Log.i(TAG, "Skipping init. Not a Panasonic device: " + Build.MODEL)
             return

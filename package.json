@@ -1,7 +1,7 @@
 {
     "name": "@SeteMares/react-native-stera",
     "title": "React Native Stera",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Stera payment service",
     "main": "index.js",
     "files": [
