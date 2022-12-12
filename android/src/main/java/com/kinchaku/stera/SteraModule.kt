@@ -41,8 +41,7 @@ class SteraModule(
 
     override fun initialize() {
         super.initialize()
-
-        if (Build.MODEL != "JT-C60") {
+        if (Build.MODEL != "JT-C60" && Build.MODEL != "JT-VT10") {
             Log.i(TAG, "Skipping init. Not a Panasonic device: " + Build.MODEL)
             return
         }
@@ -175,7 +174,7 @@ class SteraModule(
 
     @ReactMethod
     fun isSupported(promise: Promise?) {
-        promise?.resolve(Build.MODEL == "JT-C60")
+        promise?.resolve(Build.MODEL == "JT-C60" || Build.MODEL == "JT-VT10")
     }
 
     @ReactMethod
