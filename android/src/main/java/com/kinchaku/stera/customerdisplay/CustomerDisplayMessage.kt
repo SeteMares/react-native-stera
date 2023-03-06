@@ -13,7 +13,7 @@ internal class CustomerDisplayMessage (private val msg: Message?) {
                val sb = StringBuilder()
                sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
                sb.append("<customerDisplayApi id=\"displaymessage\">\n")
-               sb.append("<screenPattern>6</screenPattern>\n")
+               sb.append("<screenPattern>${msg.layout}</screenPattern>\n")
                sb.append("<headerArea>\n")
                sb.append("<headerAreaNumber>1</headerAreaNumber>\n")
                sb.append("<customerString>${msg.header1}</customerString>\n")

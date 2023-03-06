@@ -8,6 +8,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.os.Build
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.SimpleTarget
@@ -26,7 +27,7 @@ import com.panasonic.smartpayment.android.api.Result
 import java.io.File
 import java.io.FileOutputStream
 
-data class Message(val header1: String, val header2: String, val header3: String, val message1: String)
+data class Message(val header1: String, val header2: String, val header3: String, val message1: String, val layout: String)
 
 @SuppressLint("StaticFieldLeak")
 object SteraSingleton {
@@ -64,7 +65,7 @@ object SteraSingleton {
             return
         }
         val fileSize = imageFile.length()
-        Log.d(TAG, "Downloaded image $savedImagePath, size: " + fileSize / 1024.0)
+        Log.d(TAG, "Image $savedImagePath, size: " + fileSize / 1024.0)
 
         // Get PaymentDeviceManager instance
         val iPaymentDeviceManager = mPaymentApiConnection!!.iPaymentDeviceManager
@@ -116,13 +117,17 @@ object SteraSingleton {
     }
 
     private fun generateImage(url: String, onLoaded: (m: String) -> Unit) {
-        val encoder = Encoder(540, 280)
+        var encoder = Encoder(540, 280)
+        if (Build.MODEL == "JT-VT10") encoder = Encoder(320, 140)
         val bm = encoder.encodeAsBitmap(url)
         val fileName = "IMG_" + System.currentTimeMillis().toString() + ".jpg"
+        Log.d(TAG, "Generating image. Filename: $fileName")
 
         if (bm != null) {
             write(fileName, bm)
             onLoaded(fileName)
+        } else {
+            Log.d(TAG, "Generation failed")
         }
     }
 
@@ -226,13 +231,18 @@ object SteraSingleton {
         var header2 = ""
         var header3 = ""
         var message1 = ""
+        var layout = "6"
 
         if (msg.containsKey("header1")) header1 = msg["header1"].toString()
         if (msg.containsKey("header2")) header2 = msg["header2"].toString()
         if (msg.containsKey("header3")) header3 = msg["header3"].toString()
         if (msg.containsKey("message1")) message1 = msg["message1"].toString()
+        if (Build.MODEL == "JT-VT10") {
+            layout = "17"
+            message1 = ""
+        }
 
-        msgData = Message(header1, header2, header3, message1)
+        msgData = Message(header1, header2, header3, message1, layout)
         imageURL = url
         onResume(promise)
     }
