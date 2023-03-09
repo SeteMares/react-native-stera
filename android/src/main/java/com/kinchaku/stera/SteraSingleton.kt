@@ -118,7 +118,7 @@ object SteraSingleton {
 
     private fun generateImage(url: String, onLoaded: (m: String) -> Unit) {
         var encoder = Encoder(540, 280)
-        if (Build.MODEL == "JT-VT10") encoder = Encoder(380, 150)
+        if (Build.MODEL == "JT-VT10") encoder = Encoder(380, 152)
         val bm = encoder.encodeAsBitmap(url)
         val fileName = "IMG_" + System.currentTimeMillis().toString() + ".jpg"
         Log.d(TAG, "Generating image. Filename: $fileName")
@@ -239,7 +239,7 @@ object SteraSingleton {
         if (msg.containsKey("message1")) message1 = msg["message1"].toString()
         if (Build.MODEL == "JT-VT10") {
             layout = "17"
-            message1 = ""
+            message1 = "携帯で読取ってください"
         }
 
         msgData = Message(header1, header2, header3, message1, layout)
@@ -257,7 +257,7 @@ object SteraSingleton {
         var imageSource: String? = null
         if (str != null) {
             val saver = SaveToBMP()
-            val encoder = Encoder(200)
+            val encoder = Encoder(200, 10)
             val bm = encoder.encodeAsBitmap(str)
             val fileName = "IMG_" + System.currentTimeMillis().toString() + ".bmp"
             val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
