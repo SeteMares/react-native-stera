@@ -91,7 +91,7 @@ class SteraModule(
     //Get the result of requesting permission by callback
     override fun onRequestPermissionsResult(
         requestCode: Int,
-        permissions: Array<String?>,
+        permissions: Array<String>,
         grantResults: IntArray,
     ): Boolean {
         Log.d(TAG, "onRequestPermissionResult: $requestCode")

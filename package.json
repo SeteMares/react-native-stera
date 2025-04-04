@@ -1,7 +1,7 @@
 {
     "name": "@SeteMares/react-native-stera",
     "title": "React Native Stera",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "description": "Stera payment service",
     "main": "index.js",
     "files": [
@@ -28,12 +28,8 @@
     "licenseFilename": "LICENSE",
     "readmeFilename": "README.md",
     "peerDependencies": {
-        "react": "^17.0.0",
-        "react-native": ">=0.63 <1.0.x"
-    },
-    "devDependencies": {
-        "react": "^17.0.0",
-        "react-native": "^0.64.0"
+        "react": "^18.0.0",
+        "react-native": ">=0.76 <1.0.x"
     },
     "prettier": {
         "printWidth": 100
