@@ -2,11 +2,12 @@ package com.kinchaku.stera
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import android.util.Log
-import android.util.SparseArray
 import androidx.annotation.Nullable
 import androidx.core.content.ContextCompat
 import com.facebook.react.bridge.*
@@ -27,7 +28,14 @@ class SteraModule(
         Manifest.permission.WRITE_EXTERNAL_STORAGE
     )
     private lateinit var eventEmitter: DeviceEventManagerModule.RCTDeviceEventEmitter
-    private var mPromises: SparseArray<Promise?>? = null
+
+    /**
+     * Built at construction rather than in initialize(). initialize() returns early on
+     * non-stera hardware, so this used to stay null there while getPayment() still
+     * force-unwrapped it -- an off-terminal call threw inside the @ReactMethod and the
+     * JS await never settled.
+     */
+    private val mPromises = PendingTransactions()
 
     companion object {
         const val TAG = "SteraModule"
@@ -35,6 +43,51 @@ class SteraModule(
         const val FAIL = 1
         const val CANCEL = 2
         const val TRANSACTION = 1801
+
+        // The service PaymentApi.init() binds to. Resolving it is what actually
+        // proves this is a stera terminal.
+        private const val PAYMENT_API_ACTION =
+            "com.panasonic.smartpayment.android.api.service.IPaymentApiService"
+        private const val PAYMENT_API_PACKAGE = "com.panasonic.smartpayment.android.api"
+
+        // JT-C60, JT-C61 and JT-VT10 all match. Deliberately a family pattern and not
+        // an exact list: an exact list of "JT-C60"/"JT-VT10" silently disabled this
+        // entire module on the JT-C61, and the Panasonic app development guideline
+        // (JT-C60/C61 v2.02 §3.3.3.3) warns the model name changes between
+        // generations. This is only a cheap pre-filter -- see isSteraTerminal().
+        private val MODEL_PATTERN = Regex("^JT-[A-Z]+[0-9]+$")
+
+        /**
+         * Whether [model] names a device in the stera/tance family.
+         *
+         * Split out from isSteraTerminal() so it can be tested without a device: this
+         * predicate is the whole reason the module was dead on the JT-C61.
+         */
+        internal fun isSupportedModel(model: String?): Boolean =
+            model != null && MODEL_PATTERN.matches(model)
+
+        /**
+         * The extras Android delivered with an activity result, or an empty Bundle.
+         *
+         * Android delivers a null Intent on some cancel paths, and this used to be
+         * `data!!.extras` -- which threw inside onActivityResult and left the promise
+         * unsettled, hanging the caller.
+         */
+        internal fun resultExtras(data: Intent?): Bundle = data?.extras ?: Bundle()
+
+        /**
+         * True when this device is a stera terminal we can drive.
+         *
+         * The model pattern alone would happily claim support on a future JT-* device
+         * that ships without the payment service, so it is confirmed by resolving the
+         * PaymentApi service. Resolution is synchronous and side-effect free -- no
+         * bind, so it is safe to call from initialize() and getConstants().
+         */
+        fun isSteraTerminal(context: Context): Boolean {
+            if (!isSupportedModel(Build.MODEL)) return false
+            val intent = Intent(PAYMENT_API_ACTION).setPackage(PAYMENT_API_PACKAGE)
+            return context.packageManager.resolveService(intent, 0) != null
+        }
     }
 
     override fun getName() = "Stera"
@@ -42,8 +95,8 @@ class SteraModule(
     override fun initialize() {
         super.initialize()
         Log.d(TAG, "DEVICE=" + Build.MODEL)
-        if (Build.MODEL != "JT-C60" && Build.MODEL != "JT-VT10") {
-            Log.i(TAG, "Skipping init. Not a Panasonic device: " + Build.MODEL)
+        if (!isSteraTerminal(reactContext)) {
+            Log.i(TAG, "Skipping init. Not a stera terminal: " + Build.MODEL)
             return
         }
         reactContext.addActivityEventListener(this)
@@ -58,7 +111,6 @@ class SteraModule(
         } else {
             SteraSingleton.mHasPermission = true
         }
-        mPromises = SparseArray()
     }
 
     @Nullable
@@ -66,6 +118,10 @@ class SteraModule(
         val constants = HashMap<String, Any>()
         constants["OK"] = Activity.RESULT_OK
         constants["CANCELED"] = Activity.RESULT_CANCELED
+        // Exposed as a constant so JS can branch on it during its first render.
+        // isSupported() is a promise, so every consumer of it sees `undefined`
+        // until it resolves and takes the non-terminal path in the meantime.
+        constants["isStera"] = isSteraTerminal(reactContext)
         return constants
     }
 
@@ -126,8 +182,17 @@ class SteraModule(
             tax.toString()
         )
         val activity = reactApplicationContext.currentActivity
-        activity!!.startActivityForResult(intent, intRequestCode)
-        mPromises!!.put(intRequestCode, promise)
+        if (activity == null) {
+            // Force-unwrapping here threw while the app was backgrounded, and the
+            // promise was then neither resolved nor rejected: the JS await never
+            // returned and the till sat on a spinner.
+            Log.w(TAG, "No current activity. Cannot start a transaction.")
+            promise?.reject("no_activity", "No current activity to start the transaction from.")
+            return
+        }
+
+        mPromises.await(intRequestCode, promise)
+        activity.startActivityForResult(intent, intRequestCode)
 
         Log.d(TAG, "TransactionMode=$mTransactionMode")
         Log.d(TAG, "TransactionType=$mTransactionType")
@@ -175,7 +240,7 @@ class SteraModule(
 
     @ReactMethod
     fun isSupported(promise: Promise?) {
-        promise?.resolve(Build.MODEL == "JT-C60" || Build.MODEL == "JT-VT10")
+        promise?.resolve(isSteraTerminal(reactContext))
     }
 
     @ReactMethod
@@ -210,14 +275,17 @@ class SteraModule(
         Log.d(TAG, "requestCode=$requestCode")
         Log.d(TAG, "resultCode=$resultCode")
 
-        val promise = mPromises!![requestCode]
+        // Settle exactly once. The entry used to be left in place, so an abandoned
+        // transaction kept a stale promise under the same request code and the next
+        // result for it hit an already-settled callback.
+        val promise = mPromises.take(requestCode)
         if (promise != null) {
             when (resultCode) {
                 SUCCESS -> {
                     Log.d(TAG, "SUCCESS")
                 }
                 FAIL -> {
-                    Log.d(TAG, "ErrorCodeSales=" + data!!.getStringExtra("ErrorCode"))
+                    Log.d(TAG, "ErrorCodeSales=" + data?.getStringExtra("ErrorCode"))
                     Log.d(TAG, "FAIL")
                 }
                 CANCEL -> {
@@ -227,15 +295,17 @@ class SteraModule(
                     Log.d(TAG, "Incorrect resultCode. resultCode=$resultCode")
                 }
             }
+
             val result: WritableMap = WritableNativeMap()
-            with(promise) {
-                result.putInt("resultCode", resultCode)
-                result.putMap("data", Arguments.makeNativeMap(data!!.extras))
-                resolve(result)
-            }
+            result.putInt("resultCode", resultCode)
+            result.putMap("data", Arguments.makeNativeMap(resultExtras(data)))
+            promise.resolve(result)
+
             Log.d(TAG, "[out] onActivityResult()")
             return
         }
+
+        Log.d(TAG, "[out] onActivityResult(). No promise for requestCode=$requestCode")
     }
 
     override fun onNewIntent(intent: Intent?) {
