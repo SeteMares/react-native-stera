@@ -62,6 +62,24 @@ class PendingTransactionsTest {
     }
 
     @Test
+    fun `registering twice for one request code drops the first promise`() {
+        // Which is why getPayment refuses a second transaction outright. There is only
+        // one request code, so the registry cannot hold both: the first promise would be
+        // silently dropped and never settled, and the first result to arrive would
+        // settle the second call.
+        val first = RecordingPromise()
+        val second = RecordingPromise()
+        val pending = PendingTransactions()
+
+        pending.await(transaction, first)
+        pending.await(transaction, second)
+
+        assertEquals(1, pending.size)
+        assertSame(second, pending.take(transaction))
+        assertEquals(0, first.settlements)
+    }
+
+    @Test
     fun `transactions are independent`() {
         val sale = RecordingPromise()
         val reprint = RecordingPromise()

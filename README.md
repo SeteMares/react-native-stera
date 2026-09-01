@@ -24,9 +24,17 @@ rather than checking against a list of known model names — an exact list left 
 module silently inert on the `JT-C61`, and Panasonic's app development guideline
 (JT-C60/C61 v2.02 §3.3.3.3) warns that the model name changes between generations.
 
-Off a terminal, every method is a no-op: `initialize()` returns early, `isSupported()`
-resolves false, and `getConstants().isStera` is false. Read the constant rather than
-awaiting `isSupported()` if you need to branch during a first render.
+Off a terminal, `initialize()` returns early, `isSupported()` resolves false, and
+`getConstants().isStera` is false. Read the constant rather than awaiting
+`isSupported()` if you need to branch during a first render — the promise has not
+resolved yet on the first one, so a consumer that awaits it renders its non-terminal
+path and then flips.
+
+**Gate every other call on `isStera`.** The remaining methods are not no-ops off a
+terminal, they fail: `getPayment()` rejects `no_payment_activity` because the explicit
+Panasonic sales activity is not installed, and the image and print methods reject
+`no_permisson` because the lifecycle setup that grants them never ran. Those are
+settled promises rather than hangs, but they are errors, not silence.
 
 ## Tests
 

@@ -191,8 +191,29 @@ class SteraModule(
             return
         }
 
+        // One transaction at a time. Every call uses the same request code, so a second
+        // one would overwrite the first entry: the first promise would never settle, and
+        // whichever result arrived first would settle the second call instead.
+        if (mPromises.isAwaiting(intRequestCode)) {
+            Log.w(TAG, "A transaction is already awaiting a result. RequestCode=$intRequestCode")
+            promise?.reject("in_progress", "A transaction is already in progress.")
+            return
+        }
+
+        // Register before launching so a result cannot arrive before its promise is
+        // known -- then take the registration back if the launch throws, or a
+        // transaction that never started would hold the request code forever. The
+        // activity is explicit and vendor-supplied, so it can be absent, disabled or
+        // permission-guarded; none of those may leave the promise unsettled.
         mPromises.await(intRequestCode, promise)
-        activity.startActivityForResult(intent, intRequestCode)
+        try {
+            activity.startActivityForResult(intent, intRequestCode)
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "Could not start the transaction activity", e)
+            mPromises.take(intRequestCode)
+            promise?.reject("no_payment_activity", "Could not start the stera transaction activity.", e)
+            return
+        }
 
         Log.d(TAG, "TransactionMode=$mTransactionMode")
         Log.d(TAG, "TransactionType=$mTransactionType")

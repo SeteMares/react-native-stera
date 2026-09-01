@@ -5,4 +5,20 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!--
+      Package visibility. isSteraTerminal() decides whether this module does anything
+      at all by resolving the PaymentApi service, and from Android 11 that resolution
+      is filtered for a host targeting API 30+ unless the package is declared here.
+      Current stera hardware is Android 8.1, where filtering does not apply, so this
+      changes nothing today. Without it, a stera on a newer platform would match the
+      model pattern, fail to see the service, and silently report isStera = false.
+      Ignored on older platforms.
+    -->
+    <queries>
+        <package android:name="com.panasonic.smartpayment.android.api" />
+        <intent>
+            <action android:name="com.panasonic.smartpayment.android.api.service.IPaymentApiService" />
+        </intent>
+    </queries>
 </manifest>

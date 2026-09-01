@@ -58,13 +58,22 @@ object SteraSingleton {
     /**
      * Where customer-display and receipt images are staged.
      *
-     * These files are read back by Panasonic's display and printer services, which
-     * are separate processes, so they cannot live in app-private storage. This is
-     * the narrowest location that stays cross-process readable on this platform:
-     * app-scoped external storage, which is namespaced to this package and removed
-     * on uninstall -- rather than the root of external storage, where these images
-     * previously landed next to every other app's files. The images encode pass
-     * capability URLs, so where they sit matters.
+     * These files are read back by Panasonic's display and printer services, which are
+     * separate processes and which take an absolute path, so they cannot live in
+     * app-private storage and cannot be handed over as a content URI. This is the
+     * narrowest location that stays cross-process readable on the platform stera ships:
+     * app-scoped external storage, namespaced to this package and removed on uninstall,
+     * rather than the root of external storage where these images previously landed
+     * next to every other app's files. The images encode pass capability URLs, so where
+     * they sit matters.
+     *
+     * Bounded by the platform, deliberately. Current stera hardware is Android 8.1
+     * (API 27), where another app holding READ_EXTERNAL_STORAGE can read this directory.
+     * From Android 11, /Android/data is closed to other UIDs and this would stop
+     * working -- there is no path-based location that is both private and readable by a
+     * vendor service on that platform, so a stera on a newer OS needs a vendor-supported
+     * handover (a content URI with a temporary grant, or a documented shared staging
+     * directory) rather than a different File.
      */
     private fun imageDir(): File =
         context!!.getExternalFilesDir(null) ?: Environment.getExternalStorageDirectory()
