@@ -62,6 +62,13 @@ android {
     lintOptions {
         abortOnError false
     }
+    testOptions {
+        // The unit tests here cover pure decision logic -- model matching, promise
+        // bookkeeping, null-result handling -- so they run on the JVM rather than on a
+        // device. android.jar is stubs-only off device; without this, touching any
+        // framework class throws "Stub!" instead of returning a default.
+        unitTests.returnDefaultValues = true
+    }
 }
 
 repositories {
@@ -94,6 +101,8 @@ dependencies {
     annotationProcessor "com.github.bumptech.glide:compiler:$glide_version"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+
+    testImplementation 'junit:junit:4.13.2'
 }
 
 def configureReactNativePom(def pom) {

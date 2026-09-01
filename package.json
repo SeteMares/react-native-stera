@@ -1,7 +1,7 @@
 {
     "name": "@SeteMares/react-native-stera",
     "title": "React Native Stera",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "description": "Stera payment service",
     "main": "index.js",
     "files": [
@@ -10,7 +10,7 @@
         "index.js"
     ],
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Run the unit tests through a consuming app: ./gradlew :SeteMares_react-native-stera:testDebugUnitTest\" && exit 1"
     },
     "repository": {
         "type": "git",

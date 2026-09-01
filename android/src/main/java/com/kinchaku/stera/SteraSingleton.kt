@@ -55,8 +55,38 @@ object SteraSingleton {
     // list of result code of printing error
     const val SUCCESS = 0x00
 
+    /**
+     * Where customer-display and receipt images are staged.
+     *
+     * These files are read back by Panasonic's display and printer services, which are
+     * separate processes and which take an absolute path, so they cannot live in
+     * app-private storage and cannot be handed over as a content URI. This is the
+     * narrowest location that stays cross-process readable on the platform stera ships:
+     * app-scoped external storage, namespaced to this package and removed on uninstall,
+     * rather than the root of external storage where these images previously landed
+     * next to every other app's files. The images encode pass capability URLs, so where
+     * they sit matters.
+     *
+     * Bounded by the platform, deliberately. Current stera hardware is Android 8.1
+     * (API 27), where another app holding READ_EXTERNAL_STORAGE can read this directory.
+     * From Android 11, /Android/data is closed to other UIDs and this would stop
+     * working -- there is no path-based location that is both private and readable by a
+     * vendor service on that platform, so a stera on a newer OS needs a vendor-supported
+     * handover (a content URI with a temporary grant, or a documented shared staging
+     * directory) rather than a different File.
+     */
+    private fun imageDir(): File =
+        context!!.getExternalFilesDir(null) ?: Environment.getExternalStorageDirectory()
+
+    /** Remove a staged image. Safe to call with a null or blank path. */
+    private fun discardStagedImage(path: String?) {
+        if (path.isNullOrEmpty()) return
+        val file = File(path)
+        if (file.exists()) file.delete()
+    }
+
     private fun initializeDisplay(promise: Promise? = null, fileName: String) {
-        val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+        val imageFile = File(imageDir(), fileName)
         savedImagePath = imageFile.absolutePath
         if (!imageFile.exists()) {
             Log.d(TAG, "File does not exist: $savedImagePath")
@@ -132,7 +162,7 @@ object SteraSingleton {
     }
 
     fun write(fileName: String, bitmap: Bitmap) {
-        val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+        val imageFile = File(imageDir(), fileName)
         var outputStream = FileOutputStream(imageFile)
         try {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 45, outputStream)
@@ -153,7 +183,9 @@ object SteraSingleton {
         mPaymentApiConnection!!.setIPaymentApiInitializationListener(object : IPaymentApiInitializationListener {
             // PaymentApi is connected
             override fun onApiConnected() {
-                Log.d(TAG, "[in] onApiConnected. URL: $imageURL")
+                // The URL is deliberately not logged: it is a pass capability URL,
+                // and logcat is readable by anything holding READ_LOGS.
+                Log.d(TAG, "[in] onApiConnected. Image set: " + !imageURL.isNullOrBlank())
                 mCallbackHandler.post(Runnable {
                     mUsingCustomerDisplay = !imageURL.isNullOrBlank()
                     if (!mHasPermission) {
@@ -260,7 +292,7 @@ object SteraSingleton {
             val encoder = Encoder(200, 10)
             val bm = encoder.encodeAsBitmap(str)
             val fileName = "IMG_" + System.currentTimeMillis().toString() + ".bmp"
-            val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+            val imageFile = File(imageDir(), fileName)
 
             imageSource = imageFile.absolutePath
             saver.save(bm, imageSource)
@@ -276,6 +308,10 @@ object SteraSingleton {
 
         if (iPaymentDeviceManager == null) {
             Log.d(TAG, "No payment device manager")
+            // Discard the staged QR image before bailing out. Nothing will print, so
+            // onPrintReceipt -- the only other place that deletes it -- never runs,
+            // and the image would otherwise be left behind on every failed print.
+            discardStagedImage(imageSource)
             promise?.reject("not_initialized", "Payment API is not initialized")
             return
         }
@@ -315,7 +351,7 @@ object SteraSingleton {
             val encoder = Encoder(200)
             val bm = encoder.encodeAsBitmap(str)
             val fileName = "IMG_" + System.currentTimeMillis().toString() + ".bmp"
-            val imageFile = File(Environment.getExternalStorageDirectory().absolutePath, fileName)
+            val imageFile = File(imageDir(), fileName)
 
             imageSource = imageFile.absolutePath
             saver.save(bm, imageSource)
@@ -331,6 +367,10 @@ object SteraSingleton {
 
         if (iPaymentDeviceManager == null) {
             Log.d(TAG, "No payment device manager")
+            // Discard the staged QR image before bailing out. Nothing will print, so
+            // onPrintReceipt -- the only other place that deletes it -- never runs,
+            // and the image would otherwise be left behind on every failed print.
+            discardStagedImage(imageSource)
             promise?.reject("not_initialized", "Payment API is not initialized")
             return
         }
